@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  redis:
+    host: localhost
+    port: 6379
+    database: 1  # Different database for tests
+
+  flyway:
+    enabled: false  # Disable Flyway for tests
+
+jwt:
+  secret: test-secret-key-for-jwt-token-generation-and-validation
+  access-token-expiration: 900000 # 15 minutes
+  refresh-token-expiration: 604800000 # 7 days
+
+logging:
+  level:
+    com.hsware.cacs: DEBUG

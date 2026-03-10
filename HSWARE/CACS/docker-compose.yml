@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: cacs1
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cacs
+      POSTGRES_USER: az
+      POSTGRES_PASSWORD: mypassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:latest
+    container_name: redis-cacs
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:

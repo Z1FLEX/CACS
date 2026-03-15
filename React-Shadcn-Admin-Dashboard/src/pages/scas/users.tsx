@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/custom/empty-state'
 import type { User } from '@/types/scas'
 import { subscribeUsers, getUsers, loadUsers, removeUser } from '@/services'
 import AddUserDialog from './components/add-user-dialog'
+import UserDetailsDialog from './components/user-details-dialog'
 import { IconPlus, IconEdit, IconTrash } from '@tabler/icons-react'
 
 const userColumns: ColumnConfig[] = [
@@ -35,7 +36,9 @@ const userColumns: ColumnConfig[] = [
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>(() => getUsers())
   const [open, setOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [current, setCurrent] = useState<User | null>(null)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [error] = useState<string | null>(null) // Placeholder: set second element when API/service fails
 
@@ -46,6 +49,14 @@ export default function UsersPage() {
   }, [])
 
   const handleAddUser = () => setOpen(true)
+
+  const handleViewUser = (id: string) => {
+    const u = users.find(x => x.id === id)
+    if (u) {
+      setSelectedUser(u)
+      setDetailsOpen(true)
+    }
+  }
 
   const handleEditUser = (id: string) => {
     const u = users.find(x => x.id === id)
@@ -114,7 +125,11 @@ export default function UsersPage() {
                   </TableHeader>
                   <TableBody>
                     {data.map((user) => (
-                      <TableRow key={user.id}>
+                      <TableRow 
+                        key={user.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleViewUser(user.id)}
+                      >
                         {visibleColumns.map(col => (
                           <TableCell key={`${user.id}-${col.key}`}>
                             {col.key === 'photo' && (
@@ -141,7 +156,7 @@ export default function UsersPage() {
                             )}
                             {col.key === 'cardId' && (user.cardId || '-')}
                             {col.key === 'actions' && (
-                              <div className='flex gap-2'>
+                              <div className='flex gap-2' onClick={(e) => e.stopPropagation()}>
                                 <Button
                                   variant='ghost'
                                   size='sm'
@@ -175,8 +190,9 @@ export default function UsersPage() {
             )}
           </TableDataWrapper>
           )}
-        <AddUserDialog open={open} onOpenChange={(s) => { if (!s) setCurrent(null); setOpen(s) }} current={current} />
         </CardContent>
+        <AddUserDialog open={open} onOpenChange={(s) => { if (!s) setCurrent(null); setOpen(s) }} current={current} />
+        <UserDetailsDialog open={detailsOpen} onOpenChange={setDetailsOpen} user={selectedUser} />
       </Card>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

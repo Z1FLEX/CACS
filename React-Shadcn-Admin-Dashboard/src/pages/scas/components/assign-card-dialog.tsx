@@ -1,0 +1,323 @@
+import { useState, useEffect, useRef } from 'react'
+import { useForm } from 'react-hook-form'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/custom/button'
+import { Input } from '@/components/ui/input'
+import { useToast } from '@/components/ui/use-toast'
+import type { User, AccessCard } from '@/types/scas'
+import { subscribeAccessCards, getAccessCards, loadAccessCards, updateUser, updateAccessCard } from '@/services'
+import FindCardDialog from './find-card-dialog'
+import { IconSearch, IconLoader } from '@tabler/icons-react'
+
+interface Props {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  user: User | null
+  onCardAssigned?: () => void
+}
+
+interface FormData {
+  uid: string
+}
+
+export default function AssignCardDialog({ open, onOpenChange, user, onCardAssigned }: Props) {
+  const [cards, setCards] = useState<AccessCard[]>(() => getAccessCards())
+  const [isAssigning, setIsAssigning] = useState(false)
+  const [findCardOpen, setFindCardOpen] = useState(false)
+  const [scanStatus, setScanStatus] = useState<'waiting' | 'detected' | 'assigning'>('waiting')
+  const inputRef = useRef<HTMLInputElement>(null)
+  const focusIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const { toast } = useToast()
+
+  const form = useForm<FormData>({
+    defaultValues: { uid: '' }
+  })
+
+  useEffect(() => {
+    const unsub = subscribeAccessCards(setCards)
+    loadAccessCards().then(() => {})
+    return unsub
+  }, [])
+
+  // Auto-focus management
+  useEffect(() => {
+    if (open) {
+      // Focus the input when modal opens
+      setTimeout(() => {
+        inputRef.current?.focus()
+        setScanStatus('waiting')
+      }, 100)
+
+      // Set up interval to maintain focus
+      focusIntervalRef.current = setInterval(() => {
+        if (document.activeElement !== inputRef.current && inputRef.current) {
+          inputRef.current.focus()
+        }
+      }, 100)
+    } else {
+      // Clean up interval when modal closes
+      if (focusIntervalRef.current) {
+        clearInterval(focusIntervalRef.current)
+        focusIntervalRef.current = null
+      }
+      form.reset()
+      setScanStatus('waiting')
+    }
+
+    return () => {
+      if (focusIntervalRef.current) {
+        clearInterval(focusIntervalRef.current)
+      }
+    }
+  }, [open, form])
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const uid = form.getValues('uid').trim()
+      if (uid) {
+        handleAssignCard(uid)
+      }
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    form.setValue('uid', value)
+    
+    // Show detected status when UID is entered
+    if (value.trim()) {
+      setScanStatus('detected')
+    } else {
+      setScanStatus('waiting')
+    }
+  }
+
+  const handleAssignCard = async (uid: string) => {
+    if (!user) return
+
+    setIsAssigning(true)
+    setScanStatus('assigning')
+
+    try {
+      // Find the card by UID
+      const card = cards.find(c => 
+        c.cardNumber === uid || c.uid === uid
+      )
+
+      if (!card) {
+        toast({
+          title: 'Card not found',
+          description: `Card with UID "${uid}" does not exist. Please create the card first in the Access Cards page.`,
+          variant: 'destructive',
+        })
+        setScanStatus('waiting')
+        form.reset()
+        inputRef.current?.focus()
+        return
+      }
+
+      // Check if card is already assigned to another user
+      if (card.userId && card.userId !== user.id) {
+        toast({
+          title: 'Card already assigned',
+          description: `Card ${card.cardNumber} is already assigned to another user.`,
+          variant: 'destructive',
+        })
+        setScanStatus('waiting')
+        form.reset()
+        inputRef.current?.focus()
+        return
+      }
+
+      // Check if card is already assigned to this user
+      if (card.userId === user.id) {
+        toast({
+          title: 'Card already assigned',
+          description: `Card ${card.cardNumber} is already assigned to ${user.name}.`,
+          variant: 'destructive',
+        })
+        setScanStatus('waiting')
+        form.reset()
+        inputRef.current?.focus()
+        return
+      }
+
+      // Unassign any existing card from the user
+      if (user.cardId) {
+        const existingCard = cards.find(c => c.id === user.cardId)
+        if (existingCard) {
+          await updateAccessCard({
+            ...existingCard,
+            userId: undefined,
+            userName: undefined,
+          })
+        }
+      }
+
+      // Assign the new card to the user
+      await Promise.all([
+        updateUser({
+          ...user,
+          cardId: card.id,
+        }),
+        updateAccessCard({
+          ...card,
+          userId: user.id,
+          userName: user.name,
+        })
+      ])
+
+      toast({
+        title: 'Card assigned successfully',
+        description: `Card ${card.cardNumber} has been assigned to ${user.name}.`,
+      })
+
+      onCardAssigned?.()
+      onOpenChange(false)
+    } catch (error) {
+      toast({
+        title: 'Error assigning card',
+        description: 'Failed to assign card. Please try again.',
+        variant: 'destructive',
+      })
+      setScanStatus('waiting')
+      form.reset()
+      inputRef.current?.focus()
+    } finally {
+      setIsAssigning(false)
+    }
+  }
+
+  const handleFindCard = () => {
+    setFindCardOpen(true)
+  }
+
+  const handleCardSelected = (card: AccessCard) => {
+    form.setValue('uid', card.cardNumber)
+    setScanStatus('detected')
+    inputRef.current?.focus()
+  }
+
+  const getStatusIndicator = () => {
+    switch (scanStatus) {
+      case 'waiting':
+        return (
+          <div className='flex items-center gap-2 text-muted-foreground'>
+            <div className='w-2 h-2 bg-muted-foreground rounded-full'></div>
+            <span className='text-sm'>Waiting for card scan...</span>
+          </div>
+        )
+      case 'detected':
+        return (
+          <div className='flex items-center gap-2 text-green-600'>
+            <div className='w-2 h-2 bg-green-600 rounded-full'></div>
+            <span className='text-sm'>Card detected</span>
+          </div>
+        )
+      case 'assigning':
+        return (
+          <div className='flex items-center gap-2 text-blue-600'>
+            <IconLoader className='h-4 w-4 animate-spin' />
+            <span className='text-sm'>Assigning...</span>
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
+  if (!user) return null
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle>Assign Access Card</DialogTitle>
+            <DialogDescription>
+              Scan a card or manually enter the UID to assign it to {user.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-4'>
+            {/* Status Indicator */}
+            <div className='flex justify-center py-2'>
+              {getStatusIndicator()}
+            </div>
+
+            {/* UID Input */}
+            <div className='space-y-2'>
+              <label htmlFor='uid-input' className='text-sm font-medium'>
+                UID
+              </label>
+              <Input
+                id='uid-input'
+                placeholder='Scan card or enter UID manually'
+                {...form.register('uid')}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                disabled={isAssigning}
+                className='font-mono'
+              />
+              <p className='text-xs text-muted-foreground'>
+                You can scan a card or manually type/paste the UID. Press Enter to assign.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className='flex gap-2 pt-2'>
+              <Button
+                variant='outline'
+                onClick={handleFindCard}
+                disabled={isAssigning}
+                className='gap-2'
+              >
+                <IconSearch size={16} />
+                Find Card
+              </Button>
+              <Button
+                onClick={() => handleAssignCard(form.getValues('uid').trim())}
+                disabled={!form.getValues('uid').trim() || isAssigning}
+                className='flex-1'
+              >
+                {isAssigning ? (
+                  <>
+                    <IconLoader className='h-4 w-4 animate-spin mr-2' />
+                    Assigning...
+                  </>
+                ) : (
+                  'Assign Card'
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => onOpenChange(false)}
+              disabled={isAssigning}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <FindCardDialog
+        open={findCardOpen}
+        onOpenChange={setFindCardOpen}
+        cards={cards}
+        onCardSelected={handleCardSelected}
+      />
+    </>
+  )
+}

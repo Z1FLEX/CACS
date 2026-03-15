@@ -55,3 +55,27 @@ export async function removeAccessCard(id: string): Promise<void> {
   await apiDeleteAccessCard(id)
   await loadAccessCards()
 }
+
+/** Assign a card to a user */
+export async function assignCardToUser(cardId: string, userId: string, userName: string): Promise<void> {
+  const card = getAccessCards().find(c => c.id === cardId)
+  if (!card) throw new Error('Card not found')
+  
+  await updateAccessCard({
+    ...card,
+    userId,
+    userName,
+  })
+}
+
+/** Unassign a card from a user */
+export async function unassignCard(cardId: string): Promise<void> {
+  const card = getAccessCards().find(c => c.id === cardId)
+  if (!card) throw new Error('Card not found')
+  
+  await updateAccessCard({
+    ...card,
+    userId: undefined,
+    userName: undefined,
+  })
+}

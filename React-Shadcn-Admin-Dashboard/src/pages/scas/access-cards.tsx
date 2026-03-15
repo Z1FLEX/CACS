@@ -18,7 +18,8 @@ import { EmptyState } from '@/components/custom/empty-state'
 import type { AccessCard } from '@/types/scas'
 import { subscribeAccessCards, getAccessCards, loadAccessCards, removeAccessCard } from '@/services'
 import AddCardDialog from './components/add-card-dialog'
-import { IconPlus, IconEdit, IconTrash } from '@tabler/icons-react'
+import ImportCardsDialog from './components/import-cards-dialog'
+import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
 
 const accessCardColumns: ColumnConfig[] = [
   { key: 'cardNumber', label: 'Card Number', visible: true },
@@ -39,6 +40,7 @@ export default function AccessCardsPage() {
   }, [])
 
   const [open, setOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [current, setCurrent] = useState<AccessCard | null>(null)
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; cardNumber: string } | null>(null)
 
@@ -69,10 +71,16 @@ export default function AccessCardsPage() {
           <h2 className='text-2xl font-bold tracking-tight'>Access Cards Management</h2>
           <p className='text-muted-foreground'>Manage physical access cards and their status</p>
         </div>
-        <Button onClick={() => setOpen(true)} className='gap-2'>
-          <IconPlus size={16} />
-          Issue Card
-        </Button>
+        <div className='flex gap-2'>
+          <Button onClick={() => setImportOpen(true)} variant='outline' className='gap-2'>
+            <IconUpload size={16} />
+            Import
+          </Button>
+          <Button onClick={() => setOpen(true)} className='gap-2'>
+            <IconPlus size={16} />
+            Issue Card
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -157,6 +165,7 @@ export default function AccessCardsPage() {
           )}
         </CardContent>
         <AddCardDialog open={open} onOpenChange={(s) => { if (!s) setCurrent(null); setOpen(s) }} current={current} />
+        <ImportCardsDialog open={importOpen} onOpenChange={setImportOpen} />
       </Card>
 
       <AlertDialog open={!!revokeTarget} onOpenChange={(open) => !open && setRevokeTarget(null)}>

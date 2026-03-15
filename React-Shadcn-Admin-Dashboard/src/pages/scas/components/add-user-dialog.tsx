@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { z } from 'zod'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Dialog,
@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/custom/button'
 import { SelectDropdown } from '@/components/select-dropdown'
 import type { User } from '@/types/scas'
-import { subscribeAccessCards, getAccessCards, addUser, updateUser } from '@/services'
+import { addUser, updateUser } from '@/services'
 
 const roles = [
   { label: 'User', value: 'USER' },
@@ -28,7 +28,6 @@ const schema = z.object({
   email: z.string().email('Invalid email'),
   role: z.enum(['USER', 'RESPONSABLE', 'ADMIN']),
   status: z.enum(['ACTIVE', 'INACTIVE']),
-  cardId: z.string().optional(),
   photo: z.string().optional(),
 })
 type FormValues = z.infer<typeof schema>
@@ -41,12 +40,6 @@ interface Props {
 
 export default function AddUserDialog({ open, onOpenChange, current }: Props) {
   const form = useForm<FormValues>({ resolver: zodResolver(schema) })
-  const [cards, setCards] = useState(() => getAccessCards())
-
-  useEffect(() => {
-    const unsub = subscribeAccessCards(setCards)
-    return unsub
-  }, [])
 
   useEffect(() => {
     if (current) {
@@ -55,7 +48,6 @@ export default function AddUserDialog({ open, onOpenChange, current }: Props) {
         email: current.email,
         role: current.role,
         status: current.status,
-        cardId: current.cardId,
         photo: current.photo,
       })
     }
@@ -69,7 +61,6 @@ export default function AddUserDialog({ open, onOpenChange, current }: Props) {
         email: vals.email,
         role: vals.role as User['role'],
         status: vals.status as User['status'],
-        cardId: vals.cardId || undefined,
         photo: vals.photo || undefined,
       }
       await updateUser(updated)
@@ -83,7 +74,6 @@ export default function AddUserDialog({ open, onOpenChange, current }: Props) {
         email: vals.email,
         role: vals.role as User['role'],
         status: (vals.status as User['status']) || 'ACTIVE',
-        cardId: vals.cardId || undefined,
         photo: vals.photo || undefined,
         createdAt: new Date().toISOString().split('T')[0],
       }
@@ -159,25 +149,6 @@ export default function AddUserDialog({ open, onOpenChange, current }: Props) {
                   <FormLabel>Status</FormLabel>
                   <FormControl>
                     <SelectDropdown items={[{ label: 'Active', value: 'ACTIVE' }, { label: 'Inactive', value: 'INACTIVE' }]} defaultValue={field.value} onValueChange={field.onChange} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='cardId'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Access Card</FormLabel>
-                  <FormControl>
-                    <SelectDropdown
-                      placeholder='Select card (optional)'
-                      items={cards.map(c => ({ label: c.cardNumber + (c.userName ? ` — ${c.userName}` : ''), value: c.id }))}
-                      defaultValue={field.value}
-                      onValueChange={field.onChange}
-                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

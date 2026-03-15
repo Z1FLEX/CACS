@@ -17,9 +17,10 @@ import {
 import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-wrapper'
 import { EmptyState } from '@/components/custom/empty-state'
 import type { Zone } from '@/types/scas'
-import { subscribeZones, getZones, loadZones, removeZone } from '@/services'
+import { subscribeZones, getZones, loadZones, removeZone, addZone } from '@/services'
 import AddZoneDialog from './components/add-zone-dialog'
-import { IconPlus, IconEdit, IconTrash } from '@tabler/icons-react'
+import CSVImportDialog from '@/components/custom/csv-import-dialog'
+import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
 
 const zoneTypeColorMap: Record<string, string> = {
   'White': 'bg-gray-100 text-gray-800 border-gray-300',
@@ -43,6 +44,7 @@ const zoneColumns: ColumnConfig[] = [
 export default function ZonesPage() {
   const [zones, setZones] = useState<Zone[]>(() => getZones())
   const [open, setOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [current, setCurrent] = useState<Zone | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
@@ -74,6 +76,34 @@ export default function ZonesPage() {
     }
   }
 
+  const handleImportZones = async (validRows: Record<string, any>[]): Promise<number> => {
+    let importedCount = 0
+    
+    for (const row of validRows) {
+      try {
+        const newZone: Zone = {
+          id: String(Date.now() + Math.random()),
+          name: row.name,
+          location: row.location || '',
+          description: row.description || '',
+          zoneTypeId: row.zoneTypeId || '',
+          zoneType: row.zoneType ? { name: row.zoneType, level: parseInt(row.level) || 0 } : undefined,
+          manager: row.manager || '',
+          status: row.status || 'active',
+          createdAt: new Date().toISOString().split('T')[0],
+        }
+        
+        await addZone(newZone)
+        importedCount++
+      } catch (error) {
+        console.error('Failed to import zone:', error)
+      }
+    }
+    
+    await loadZones()
+    return importedCount
+  }
+
   return (
     <div className='space-y-4'>
       <div className='flex items-center justify-between'>
@@ -81,10 +111,16 @@ export default function ZonesPage() {
           <h2 className='text-2xl font-bold tracking-tight'>Zones Management</h2>
           <p className='text-muted-foreground'>Manage access zones and their properties</p>
         </div>
-        <Button onClick={handleAddZone} className='gap-2'>
-          <IconPlus size={16} />
-          Create Zone
-        </Button>
+        <div className='flex gap-2'>
+          <Button onClick={() => setImportOpen(true)} variant='outline' className='gap-2'>
+            <IconUpload size={16} />
+            Import
+          </Button>
+          <Button onClick={handleAddZone} className='gap-2'>
+            <IconPlus size={16} />
+            Create Zone
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -177,7 +213,44 @@ export default function ZonesPage() {
             )}
           </TableDataWrapper>
           )}
-        <AddZoneDialog open={open} onOpenChange={(s) => { if (!s) setCurrent(null); setOpen(s) }} current={current} />
+          <AddZoneDialog open={open} onOpenChange={(s) => { if (!s) setCurrent(null); setOpen(s) }} current={current} />
+          <CSVImportDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            title='Import Zones'
+            description='Bulk import zones from a CSV file. Zones will be created with the provided information.'
+            fields={[
+              { key: 'name', label: 'Zone Name', required: true, type: 'string' },
+              { key: 'location', label: 'Location', required: false, type: 'string' },
+              { key: 'description', label: 'Description', required: false, type: 'string' },
+              { key: 'zoneType', label: 'Zone Type', required: false, type: 'string' },
+              { key: 'level', label: 'Security Level', required: false, type: 'number' },
+              { key: 'manager', label: 'Manager', required: false, type: 'string' },
+              { key: 'status', label: 'Status', required: false, type: 'enum', options: ['active', 'inactive'] },
+            ]}
+            exampleData={[
+              {
+                name: 'Main Entrance',
+                location: 'Building A - Floor 1',
+                description: 'Main entrance lobby area',
+                zoneType: 'Green',
+                level: '2',
+                manager: 'John Doe',
+                status: 'active'
+              },
+              {
+                name: 'Server Room',
+                location: 'Building B - Basement',
+                description: 'Data center and server infrastructure',
+                zoneType: 'Red',
+                level: '5',
+                manager: 'Jane Smith',
+                status: 'active'
+              }
+            ]}
+            onImport={handleImportZones}
+            templateFileName='zones-template.csv'
+          />
         </CardContent>
       </Card>
 

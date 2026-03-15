@@ -6,10 +6,11 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-wrapper'
 import type { Door, Device } from '@/types/scas'
-import { subscribeDoors, getDoors, loadDoors, removeDoor, subscribeDevices, getDevices, loadDevices, removeDevice } from '@/services'
+import { subscribeDoors, getDoors, loadDoors, removeDoor, subscribeDevices, getDevices, loadDevices, removeDevice, addDoor, addDevice } from '@/services'
 import AddDoorDialog from './components/add-door-dialog'
 import AddDeviceDialog from './components/add-device-dialog'
-import { IconPlus, IconEdit, IconTrash } from '@tabler/icons-react'
+import CSVImportDialog from '@/components/custom/csv-import-dialog'
+import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
 
 const doorColumns: ColumnConfig[] = [
   { key: 'name', label: 'Door Name', visible: true },
@@ -34,8 +35,10 @@ export default function DoorsDevicesPage() {
   const [devices, setDevices] = useState<Device[]>(() => getDevices())
   const [openDoor, setOpenDoor] = useState(false)
   const [openDevice, setOpenDevice] = useState(false)
-    const [currentDoor, setCurrentDoor] = useState<any | null>(null)
-    const [currentDevice, setCurrentDevice] = useState<any | null>(null)
+  const [importDoorOpen, setImportDoorOpen] = useState(false)
+  const [importDeviceOpen, setImportDeviceOpen] = useState(false)
+  const [currentDoor, setCurrentDoor] = useState<any | null>(null)
+  const [currentDevice, setCurrentDevice] = useState<any | null>(null)
 
   useEffect(() => {
     const u1 = subscribeDoors(setDoors)
@@ -79,6 +82,58 @@ export default function DoorsDevicesPage() {
     }
   }
 
+  const handleImportDoors = async (validRows: Record<string, any>[]): Promise<number> => {
+    let importedCount = 0
+    
+    for (const row of validRows) {
+      try {
+        const newDoor: Door = {
+          id: String(Date.now() + Math.random()),
+          name: row.name,
+          zoneId: row.zoneId || '',
+          zoneName: row.zoneName || '',
+          status: row.status || 'online',
+          lastActivity: new Date().toISOString(),
+        }
+        
+        await addDoor(newDoor)
+        importedCount++
+      } catch (error) {
+        console.error('Failed to import door:', error)
+      }
+    }
+    
+    await loadDoors()
+    return importedCount
+  }
+
+  const handleImportDevices = async (validRows: Record<string, any>[]): Promise<number> => {
+    let importedCount = 0
+    
+    for (const row of validRows) {
+      try {
+        const newDevice: Device = {
+          id: String(Date.now() + Math.random()),
+          name: row.name,
+          type: row.type || 'reader',
+          doorId: row.doorId || '',
+          doorName: row.doorName || '',
+          location: row.location || '',
+          status: row.status || 'online',
+          lastHeartbeat: new Date().toISOString(),
+        }
+        
+        await addDevice(newDevice)
+        importedCount++
+      } catch (error) {
+        console.error('Failed to import device:', error)
+      }
+    }
+    
+    await loadDevices()
+    return importedCount
+  }
+
   return (
     <div className='space-y-4'>
       <div>
@@ -93,7 +148,11 @@ export default function DoorsDevicesPage() {
         </TabsList>
 
         <TabsContent value='doors' className='space-y-4'>
-          <div className='flex justify-end'>
+          <div className='flex justify-end gap-2'>
+            <Button onClick={() => setImportDoorOpen(true)} variant='outline' className='gap-2'>
+              <IconUpload size={16} />
+              Import
+            </Button>
             <Button onClick={handleAddDoor} className='gap-2'>
               <IconPlus size={16} />
               Add Door
@@ -170,7 +229,11 @@ export default function DoorsDevicesPage() {
         </TabsContent>
 
         <TabsContent value='devices' className='space-y-4'>
-          <div className='flex justify-end'>
+          <div className='flex justify-end gap-2'>
+            <Button onClick={() => setImportDeviceOpen(true)} variant='outline' className='gap-2'>
+              <IconUpload size={16} />
+              Import
+            </Button>
             <Button onClick={handleAddDevice} className='gap-2'>
               <IconPlus size={16} />
               Add Device
@@ -250,6 +313,70 @@ export default function DoorsDevicesPage() {
       </Tabs>
       <AddDoorDialog open={openDoor} onOpenChange={(s) => { if (!s) setCurrentDoor(null); setOpenDoor(s) }} current={currentDoor} />
       <AddDeviceDialog open={openDevice} onOpenChange={(s) => { if (!s) setCurrentDevice(null); setOpenDevice(s) }} current={currentDevice} />
+      
+      <CSVImportDialog
+        open={importDoorOpen}
+        onOpenChange={setImportDoorOpen}
+        title='Import Doors'
+        description='Bulk import doors from a CSV file. Doors will be created with the provided information.'
+        fields={[
+          { key: 'name', label: 'Door Name', required: true, type: 'string' },
+          { key: 'zoneId', label: 'Zone ID', required: false, type: 'string' },
+          { key: 'zoneName', label: 'Zone Name', required: false, type: 'string' },
+          { key: 'status', label: 'Status', required: false, type: 'enum', options: ['online', 'offline'] },
+        ]}
+        exampleData={[
+          {
+            name: 'Main Entrance',
+            zoneId: 'zone1',
+            zoneName: 'Reception',
+            status: 'online'
+          },
+          {
+            name: 'Server Room Door',
+            zoneId: 'zone2',
+            zoneName: 'Server Room',
+            status: 'online'
+          }
+        ]}
+        onImport={handleImportDoors}
+        templateFileName='doors-template.csv'
+      />
+      
+      <CSVImportDialog
+        open={importDeviceOpen}
+        onOpenChange={setImportDeviceOpen}
+        title='Import Devices'
+        description='Bulk import devices from a CSV file. Devices will be created with the provided information.'
+        fields={[
+          { key: 'name', label: 'Device Name', required: true, type: 'string' },
+          { key: 'type', label: 'Device Type', required: false, type: 'enum', options: ['reader', 'lock', 'sensor', 'camera'] },
+          { key: 'doorId', label: 'Door ID', required: false, type: 'string' },
+          { key: 'doorName', label: 'Door Name', required: false, type: 'string' },
+          { key: 'location', label: 'Location', required: false, type: 'string' },
+          { key: 'status', label: 'Status', required: false, type: 'enum', options: ['online', 'offline', 'maintenance'] },
+        ]}
+        exampleData={[
+          {
+            name: 'Main Entrance Reader',
+            type: 'reader',
+            doorId: 'door1',
+            doorName: 'Main Entrance',
+            location: 'Building A - Floor 1',
+            status: 'online'
+          },
+          {
+            name: 'Server Room Lock',
+            type: 'lock',
+            doorId: 'door2',
+            doorName: 'Server Room Door',
+            location: 'Building B - Basement',
+            status: 'online'
+          }
+        ]}
+        onImport={handleImportDevices}
+        templateFileName='devices-template.csv'
+      />
     </div>
   )
 }

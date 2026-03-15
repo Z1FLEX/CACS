@@ -17,10 +17,11 @@ import {
 import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-wrapper'
 import { EmptyState } from '@/components/custom/empty-state'
 import type { User } from '@/types/scas'
-import { subscribeUsers, getUsers, loadUsers, removeUser } from '@/services'
+import { subscribeUsers, getUsers, loadUsers, removeUser, addUser } from '@/services'
 import AddUserDialog from './components/add-user-dialog'
 import UserDetailsDialog from './components/user-details-dialog'
-import { IconPlus, IconEdit, IconTrash } from '@tabler/icons-react'
+import CSVImportDialog from '@/components/custom/csv-import-dialog'
+import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
 
 const userColumns: ColumnConfig[] = [
   { key: 'photo', label: 'Photo', visible: true },
@@ -37,6 +38,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>(() => getUsers())
   const [open, setOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [current, setCurrent] = useState<User | null>(null)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
@@ -78,6 +80,34 @@ export default function UsersPage() {
     }
   }
 
+  const handleImportUsers = async (validRows: Record<string, any>[]): Promise<number> => {
+    let importedCount = 0
+    
+    for (const row of validRows) {
+      try {
+        const newUser: User = {
+          id: String(Date.now() + Math.random()),
+          name: row.name,
+          firstName: row.name?.split(' ')[0] || '',
+          lastName: row.name?.split(' ').slice(1).join(' ') || '',
+          email: row.email,
+          role: row.role || 'USER',
+          status: row.status || 'ACTIVE',
+          createdAt: new Date().toISOString().split('T')[0],
+          photo: row.photo || undefined,
+        }
+        
+        await addUser(newUser)
+        importedCount++
+      } catch (error) {
+        console.error('Failed to import user:', error)
+      }
+    }
+    
+    await loadUsers()
+    return importedCount
+  }
+
   return (
     <div className='space-y-4'>
       {error && (
@@ -90,10 +120,16 @@ export default function UsersPage() {
           <h2 className='text-2xl font-bold tracking-tight'>Users Management</h2>
           <p className='text-muted-foreground'>Manage system users and their roles</p>
         </div>
-        <Button onClick={handleAddUser} className='gap-2'>
-          <IconPlus size={16} />
-          Add User
-        </Button>
+        <div className='flex gap-2'>
+          <Button onClick={() => setImportOpen(true)} variant='outline' className='gap-2'>
+            <IconUpload size={16} />
+            Import
+          </Button>
+          <Button onClick={handleAddUser} className='gap-2'>
+            <IconPlus size={16} />
+            Add User
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -154,7 +190,17 @@ export default function UsersPage() {
                                 {user.status}
                               </Badge>
                             )}
-                            {col.key === 'cardId' && (user.cardId || '-')}
+                            {col.key === 'cardId' && (
+                              user.cardId ? (
+                                <Badge variant='default' className='bg-green-600 hover:bg-green-700'>
+                                  Card Assigned
+                                </Badge>
+                              ) : (
+                                <Badge variant='destructive'>
+                                  No Card
+                                </Badge>
+                              )
+                            )}
                             {col.key === 'actions' && (
                               <div className='flex gap-2' onClick={(e) => e.stopPropagation()}>
                                 <Button
@@ -193,6 +239,37 @@ export default function UsersPage() {
         </CardContent>
         <AddUserDialog open={open} onOpenChange={(s) => { if (!s) setCurrent(null); setOpen(s) }} current={current} />
         <UserDetailsDialog open={detailsOpen} onOpenChange={setDetailsOpen} user={selectedUser} />
+        <CSVImportDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          title='Import Users'
+          description='Bulk import users from a CSV file. Users will be created with the provided information.'
+          fields={[
+            { key: 'name', label: 'Full Name', required: true, type: 'string' },
+            { key: 'email', label: 'Email', required: true, type: 'email' },
+            { key: 'role', label: 'Role', required: false, type: 'enum', options: ['USER', 'RESPONSABLE', 'ADMIN'] },
+            { key: 'status', label: 'Status', required: false, type: 'enum', options: ['ACTIVE', 'INACTIVE'] },
+            { key: 'photo', label: 'Photo URL', required: false, type: 'string' },
+          ]}
+          exampleData={[
+            {
+              name: 'John Doe',
+              email: 'john.doe@example.com',
+              role: 'USER',
+              status: 'ACTIVE',
+              photo: 'https://example.com/photo.jpg'
+            },
+            {
+              name: 'Jane Smith',
+              email: 'jane.smith@example.com',
+              role: 'RESPONSABLE',
+              status: 'ACTIVE',
+              photo: ''
+            }
+          ]}
+          onImport={handleImportUsers}
+          templateFileName='users-template.csv'
+        />
       </Card>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

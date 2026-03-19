@@ -1,13 +1,16 @@
 package com.hsware.cacs.service;
 
+import com.hsware.cacs.dto.ScheduleDTO;
+import com.hsware.cacs.dto.ScheduleCreateDTO;
+import com.hsware.cacs.dto.ScheduleUpdateDTO;
 import com.hsware.cacs.entity.Schedule;
+import com.hsware.cacs.mapper.DtoMapper;
 import com.hsware.cacs.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -16,34 +19,35 @@ import java.util.stream.Collectors;
 public class ScheduleService {
 
     private final ScheduleRepository scheduleRepository;
+    private final DtoMapper dtoMapper;
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> findAll() {
+    public List<ScheduleDTO> findAll() {
         return scheduleRepository.findByDeletedAtIsNull().stream()
-                .map(this::toMap)
+                .map(dtoMapper::toScheduleDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public Optional<Map<String, Object>> findById(Integer id) {
-        return scheduleRepository.findByIdAndDeletedAtIsNull(id).map(this::toMap);
+    public Optional<ScheduleDTO> findById(Integer id) {
+        return scheduleRepository.findByIdAndDeletedAtIsNull(id).map(dtoMapper::toScheduleDTO);
     }
 
     @Transactional
-    public Map<String, Object> create(Map<String, Object> body) {
-        Schedule s = toEntity(body, null);
-        s = scheduleRepository.save(s);
-        return toMap(s);
+    public ScheduleDTO create(ScheduleCreateDTO scheduleCreateDTO) {
+        Schedule schedule = dtoMapper.toSchedule(scheduleCreateDTO);
+        schedule = scheduleRepository.save(schedule);
+        return dtoMapper.toScheduleDTO(schedule);
     }
 
     @Transactional
-    public Optional<Map<String, Object>> update(Integer id, Map<String, Object> body) {
+    public Optional<ScheduleDTO> update(Integer id, ScheduleUpdateDTO scheduleUpdateDTO) {
         Optional<Schedule> existing = scheduleRepository.findByIdAndDeletedAtIsNull(id);
         if (existing.isEmpty()) return Optional.empty();
-        Schedule s = existing.get();
-        applyBodyToSchedule(body, s);
-        s = scheduleRepository.save(s);
-        return Optional.of(toMap(s));
+        Schedule schedule = existing.get();
+        dtoMapper.updateScheduleFromDTO(scheduleUpdateDTO, schedule);
+        schedule = scheduleRepository.save(schedule);
+        return Optional.of(dtoMapper.toScheduleDTO(schedule));
     }
 
     @Transactional
@@ -56,34 +60,4 @@ public class ScheduleService {
         return true;
     }
 
-    public Map<String, Object> toMap(Schedule s) {
-        return Map.of(
-                "id", s.getId(),
-                "name", nullToEmpty(s.getName()),
-                "days", "",
-                "startTime", "",
-                "endTime", "",
-                "zones", ""
-        );
-    }
-
-    private Schedule toEntity(Map<String, Object> body, Integer id) {
-        Schedule s = new Schedule();
-        if (id != null) s.setId(id);
-        applyBodyToSchedule(body, s);
-        return s;
-    }
-
-    private void applyBodyToSchedule(Map<String, Object> body, Schedule s) {
-        s.setName(getStr(body, "name"));
-    }
-
-    private static String getStr(Map<String, Object> m, String key) {
-        Object v = m.get(key);
-        return v != null ? v.toString().trim() : "";
-    }
-
-    private static String nullToEmpty(String s) {
-        return s != null ? s : "";
-    }
 }

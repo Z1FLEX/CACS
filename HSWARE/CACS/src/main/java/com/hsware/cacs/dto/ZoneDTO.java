@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.Map;
 
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -15,12 +16,14 @@ public class ZoneDTO extends BaseDTO {
     private String name;
     private String location;
     private Integer zoneTypeId;
+    private Map<String, Object> zoneType;
     
-    public ZoneDTO(Integer id, String name, String location, Integer zoneTypeId, Instant createdAt) {
+    public ZoneDTO(Integer id, String name, String location, Integer zoneTypeId, Map<String, Object> zoneType, Instant createdAt) {
         this.id = id;
         this.name = name;
         this.location = location;
         this.zoneTypeId = zoneTypeId;
+        this.zoneType = zoneType;
         this.createdAt = createdAt;
     }
 }

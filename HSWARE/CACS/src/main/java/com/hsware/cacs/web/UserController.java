@@ -1,6 +1,10 @@
 package com.hsware.cacs.web;
 
+import com.hsware.cacs.dto.UserDTO;
+import com.hsware.cacs.dto.UserCreateDTO;
+import com.hsware.cacs.dto.UserUpdateDTO;
 import com.hsware.cacs.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,7 +12,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -20,13 +23,13 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RESPONSABLE')")
-    public List<Map<String, Object>> list() {
+    public List<UserDTO> list() {
         return userService.findAll();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RESPONSABLE')")
-    public ResponseEntity<Map<String, Object>> get(@PathVariable Integer id) {
+    public ResponseEntity<UserDTO> get(@PathVariable Integer id) {
         return userService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -34,15 +37,15 @@ public class UserController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
-        Map<String, Object> created = userService.create(body);
+    public ResponseEntity<UserDTO> create(@Valid @RequestBody UserCreateDTO userCreateDTO) {
+        UserDTO created = userService.create(userCreateDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> update(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
-        return userService.update(id, body)
+    public ResponseEntity<UserDTO> update(@PathVariable Integer id, @Valid @RequestBody UserUpdateDTO userUpdateDTO) {
+        return userService.update(id, userUpdateDTO)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

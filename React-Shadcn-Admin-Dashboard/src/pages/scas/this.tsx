@@ -26,11 +26,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/use-toast'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
-import { CalendarEvent } from './data/schema'
-import { eventTypes, initialEvents, participants } from './data/calendar'
+import { CalendarEvent } from '../data/schema'
+import { eventTypes, initialEvents, participants } from '../data/calendar'
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-export default function SchedulesPage() {
+export default function CalendarPage() {
   const calendarRef = useRef<FullCalendar>(null)
   const [filterBy, setFilterBy] = useState<string>('all')
   const [calendarView, setCalendarView] = useState<string>("dayGridMonth")

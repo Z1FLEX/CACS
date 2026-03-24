@@ -30,6 +30,9 @@ public class Profile {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "created_at")
+    private Instant createdAt;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "profile_zone",

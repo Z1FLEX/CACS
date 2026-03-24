@@ -30,4 +30,7 @@ public class Zone {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    @Column(name = "created_at")
+    private Instant createdAt;
 }

@@ -26,6 +26,9 @@ public class Schedule {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "created_at")
+    private Instant createdAt;
+
     @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ScheduleDay> scheduleDays = new ArrayList<>();

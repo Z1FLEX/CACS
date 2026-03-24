@@ -1,5 +1,8 @@
 package com.hsware.cacs.web;
 
+import com.hsware.cacs.dto.ScheduleDTO;
+import com.hsware.cacs.dto.ScheduleCreateDTO;
+import com.hsware.cacs.dto.ScheduleUpdateDTO;
 import com.hsware.cacs.service.ScheduleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -7,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/schedules")
@@ -18,25 +20,25 @@ public class ScheduleController {
     private final ScheduleService scheduleService;
 
     @GetMapping
-    public List<Map<String, Object>> list() {
+    public List<ScheduleDTO> list() {
         return scheduleService.findAll();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> get(@PathVariable Integer id) {
+    public ResponseEntity<ScheduleDTO> get(@PathVariable Integer id) {
         return scheduleService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
-        Map<String, Object> created = scheduleService.create(body);
+    public ResponseEntity<ScheduleDTO> create(@RequestBody ScheduleCreateDTO body) {
+        ScheduleDTO created = scheduleService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> update(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<ScheduleDTO> update(@PathVariable Integer id, @RequestBody ScheduleUpdateDTO body) {
         return scheduleService.update(id, body)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

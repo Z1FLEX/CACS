@@ -1,5 +1,8 @@
 package com.hsware.cacs.web;
 
+import com.hsware.cacs.dto.DoorDTO;
+import com.hsware.cacs.dto.DoorCreateDTO;
+import com.hsware.cacs.dto.DoorUpdateDTO;
 import com.hsware.cacs.service.DoorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -7,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/doors")
@@ -18,25 +20,25 @@ public class DoorController {
     private final DoorService doorService;
 
     @GetMapping
-    public List<Map<String, Object>> list() {
+    public List<DoorDTO> list() {
         return doorService.findAll();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> get(@PathVariable Integer id) {
+    public ResponseEntity<DoorDTO> get(@PathVariable Integer id) {
         return doorService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
-        Map<String, Object> created = doorService.create(body);
+    public ResponseEntity<DoorDTO> create(@RequestBody DoorCreateDTO body) {
+        DoorDTO created = doorService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> update(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<DoorDTO> update(@PathVariable Integer id, @RequestBody DoorUpdateDTO body) {
         return doorService.update(id, body)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

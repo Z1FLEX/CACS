@@ -1,5 +1,8 @@
 package com.hsware.cacs.web;
 
+import com.hsware.cacs.dto.ZoneDTO;
+import com.hsware.cacs.dto.ZoneCreateDTO;
+import com.hsware.cacs.dto.ZoneUpdateDTO;
 import com.hsware.cacs.service.ZoneService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -7,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/zones")
@@ -18,25 +20,25 @@ public class ZoneController {
     private final ZoneService zoneService;
 
     @GetMapping
-    public List<Map<String, Object>> list() {
+    public List<ZoneDTO> list() {
         return zoneService.findAll();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> get(@PathVariable Integer id) {
+    public ResponseEntity<ZoneDTO> get(@PathVariable Integer id) {
         return zoneService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
-        Map<String, Object> created = zoneService.create(body);
+    public ResponseEntity<ZoneDTO> create(@RequestBody ZoneCreateDTO body) {
+        ZoneDTO created = zoneService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> update(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<ZoneDTO> update(@PathVariable Integer id, @RequestBody ZoneUpdateDTO body) {
         return zoneService.update(id, body)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

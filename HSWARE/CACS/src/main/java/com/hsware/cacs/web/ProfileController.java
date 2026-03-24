@@ -1,5 +1,8 @@
 package com.hsware.cacs.web;
 
+import com.hsware.cacs.dto.ProfileDTO;
+import com.hsware.cacs.dto.ProfileCreateDTO;
+import com.hsware.cacs.dto.ProfileUpdateDTO;
 import com.hsware.cacs.service.ProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -7,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/profiles")
@@ -18,25 +20,25 @@ public class ProfileController {
     private final ProfileService profileService;
 
     @GetMapping
-    public List<Map<String, Object>> list() {
+    public List<ProfileDTO> list() {
         return profileService.findAll();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> get(@PathVariable Integer id) {
+    public ResponseEntity<ProfileDTO> get(@PathVariable Integer id) {
         return profileService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
-        Map<String, Object> created = profileService.create(body);
+    public ResponseEntity<ProfileDTO> create(@RequestBody ProfileCreateDTO body) {
+        ProfileDTO created = profileService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> update(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<ProfileDTO> update(@PathVariable Integer id, @RequestBody ProfileUpdateDTO body) {
         return profileService.update(id, body)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

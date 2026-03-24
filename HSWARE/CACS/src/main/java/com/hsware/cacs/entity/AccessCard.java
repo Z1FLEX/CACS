@@ -29,4 +29,7 @@ public class AccessCard {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    @Column(name = "created_at")
+    private Instant createdAt;
 }

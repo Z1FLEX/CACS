@@ -82,7 +82,6 @@ export interface Zone {
   name: string
   location?: string
   description?: string
-  doorsCount?: number
   status?: ZoneStatus
   createdAt?: string
   deletedAt?: string | null
@@ -101,8 +100,7 @@ export interface Door {
   name: string
   zoneId: string
   zoneName?: string
-  status?: 'online' | 'offline'
-  lastActivity?: string
+  location?: string
   createdAt?: string
   deletedAt?: string | null
 }
@@ -125,10 +123,9 @@ export interface Device {
   ip?: string
   port?: number
   lastSeenAt?: string
-  lastHeartbeat?: string
-  location?: string
-  doorId: string
-  doorName?: string
+  lastActivity?: string
+  doorIds?: string[]
+  doorNames?: string[]
   createdAt?: string
   deletedAt?: string | null
 }

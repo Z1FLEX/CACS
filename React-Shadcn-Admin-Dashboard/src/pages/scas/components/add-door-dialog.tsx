@@ -20,8 +20,7 @@ import { getZones, subscribeZones, addDoor, updateDoor } from '@/services'
 const schema = z.object({
   name: z.string().min(1),
   zoneId: z.string().min(1),
-  status: z.enum(['online', 'offline']).optional(),
-  lastActivity: z.string().optional(),
+  location: z.string().optional(),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -32,7 +31,7 @@ interface Props {
 }
 
 export default function AddDoorDialog({ open, onOpenChange, current }: Props) {
-  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { status: 'online' } })
+  const form = useForm<FormValues>({ resolver: zodResolver(schema) })
   const [zones, setZones] = useState<Zone[]>(() => getZones())
 
   useEffect(() => {
@@ -42,7 +41,7 @@ export default function AddDoorDialog({ open, onOpenChange, current }: Props) {
 
   useEffect(() => {
     if (current) {
-      form.reset({ name: current.name, zoneId: current.zoneId, status: current.status, lastActivity: current.lastActivity })
+      form.reset({ name: current.name, zoneId: current.zoneId, location: current.location })
     }
   }, [current])
 
@@ -53,8 +52,7 @@ export default function AddDoorDialog({ open, onOpenChange, current }: Props) {
         name: vals.name,
         zoneId: vals.zoneId,
         zoneName: zones.find(z => z.id === vals.zoneId)?.name || current.zoneName,
-        status: vals.status || current.status,
-        lastActivity: vals.lastActivity || current.lastActivity,
+        location: vals.location || current.location,
       }
       await updateDoor(updated)
     } else {
@@ -65,8 +63,7 @@ export default function AddDoorDialog({ open, onOpenChange, current }: Props) {
         name: vals.name,
         zoneId: vals.zoneId,
         zoneName: zone ? zone.name : 'Unknown',
-        status: vals.status || 'online',
-        lastActivity: vals.lastActivity || new Date().toISOString(),
+        location: vals.location || '',
       }
       await addDoor(newDoor as any)
     }
@@ -104,21 +101,11 @@ export default function AddDoorDialog({ open, onOpenChange, current }: Props) {
               </FormItem>
             )} />
 
-            <FormField control={form.control} name='status' render={({ field }) => (
+            <FormField control={form.control} name='location' render={({ field }) => (
               <FormItem>
-                <FormLabel>Status</FormLabel>
+                <FormLabel>Location</FormLabel>
                 <FormControl>
-                  <SelectDropdown items={[{ label: 'Online', value: 'online' }, { label: 'Offline', value: 'offline' }]} defaultValue={field.value} onValueChange={field.onChange} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <FormField control={form.control} name='lastActivity' render={({ field }) => (
-              <FormItem>
-                <FormLabel>Last Activity</FormLabel>
-                <FormControl>
-                  <Input type='datetime-local' {...field} />
+                  <Input placeholder='Building A - Floor 1' {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

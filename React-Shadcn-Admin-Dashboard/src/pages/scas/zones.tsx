@@ -19,6 +19,7 @@ import { EmptyState } from '@/components/custom/empty-state'
 import type { Zone } from '@/types/scas'
 import { subscribeZones, getZones, loadZones, removeZone, addZone } from '@/services'
 import AddZoneDialog from './components/add-zone-dialog'
+import AssignZoneManagerDialog from './components/assign-zone-manager-dialog'
 import CSVImportDialog from '@/components/custom/csv-import-dialog'
 import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
 
@@ -33,11 +34,9 @@ const zoneTypeColorMap: Record<string, string> = {
 
 const zoneColumns: ColumnConfig[] = [
   { key: 'name', label: 'Zone Name', visible: true },
-  { key: 'description', label: 'Description', visible: true },
+  { key: 'location', label: 'Location', visible: true },
   { key: 'zoneType', label: 'Zone Type', visible: true },
-  { key: 'doorsCount', label: 'Doors Count', visible: true },
   { key: 'manager', label: 'Manager', visible: true },
-  { key: 'status', label: 'Status', visible: true },
   { key: 'actions', label: 'Actions', visible: true },
 ]
 
@@ -47,6 +46,8 @@ export default function ZonesPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [current, setCurrent] = useState<Zone | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [managerDialogOpen, setManagerDialogOpen] = useState(false)
+  const [selectedZone, setSelectedZone] = useState<Zone | null>(null)
 
   useEffect(() => {
     const unsub = subscribeZones(setZones)
@@ -67,6 +68,11 @@ export default function ZonesPage() {
   const handleDeleteZone = (id: string) => {
     const z = zones.find(x => x.id === id)
     if (z) setDeleteTarget({ id: z.id, name: z.name })
+  }
+
+  const handleAssignManager = (zone: Zone) => {
+    setSelectedZone(zone)
+    setManagerDialogOpen(true)
   }
 
   const confirmDeleteZone = async () => {
@@ -155,30 +161,49 @@ export default function ZonesPage() {
                       <TableRow key={zone.id}>
                         {visibleColumns.map(col => (
                           <TableCell key={`${zone.id}-${col.key}`}>
-                            {col.key === 'status' && (
-                              <Badge variant={(zone as any).status === 'active' || (zone as any).status === 'ACTIVE' ? 'default' : 'secondary'}>
-                                {zone.status}
-                              </Badge>
-                            )}
                             {col.key === 'zoneType' && zone.zoneType && (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Badge
                                       variant='outline'
-                                      className={`capitalize ${zoneTypeColorMap[zone.zoneType.name] || ''}`}
+                                      className={`capitalize ${
+                                        zoneTypeColorMap[
+                                          typeof zone.zoneType === 'object' 
+                                            ? zone.zoneType.name 
+                                            : zone.zoneType
+                                        ] || 'bg-gray-100 text-gray-800 border-gray-300'
+                                      }`}
                                     >
-                                      {zone.zoneType.name}
+                                      {typeof zone.zoneType === 'object' 
+                                        ? zone.zoneType.name 
+                                        : zone.zoneType
+                                      }
                                     </Badge>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Security Level: {zone.zoneType.level}</p>
+                                    <p>Security Level: {
+                                      typeof zone.zoneType === 'object' 
+                                        ? zone.zoneType.level 
+                                        : 'N/A'
+                                    }</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             )}
-                            {col.key === 'name' && <span className='font-medium'>{zone.name}</span>}
-                            {col.key === 'manager' && (zone.manager || '-')}
+                            {col.key === 'name' && (
+                              <button
+                                className='font-medium text-blue-600 hover:text-blue-800 hover:underline'
+                                onClick={() => handleAssignManager(zone)}
+                              >
+                                {zone.name}
+                              </button>
+                            )}
+                            {col.key === 'manager' && (
+                              <span className={zone.manager ? 'font-medium' : 'text-gray-500'}>
+                                {zone.manager || 'No manager assigned'}
+                              </span>
+                            )}
                             {col.key === 'actions' && (
                               <div className='flex gap-2'>
                                 <Button
@@ -197,10 +222,9 @@ export default function ZonesPage() {
                                 </Button>
                               </div>
                             )}
-                            {!['status', 'zoneType', 'name', 'manager', 'actions'].includes(col.key) && (
+                            {!['zoneType', 'name', 'manager', 'actions'].includes(col.key) && (
                               <>
-                                {col.key === 'description' && zone.description}
-                                {col.key === 'doorsCount' && zone.doorsCount}
+                                {col.key === 'location' && (zone.location || zone.description || '-')}
                               </>
                             )}
                           </TableCell>
@@ -222,30 +246,24 @@ export default function ZonesPage() {
             fields={[
               { key: 'name', label: 'Zone Name', required: true, type: 'string' },
               { key: 'location', label: 'Location', required: false, type: 'string' },
-              { key: 'description', label: 'Description', required: false, type: 'string' },
               { key: 'zoneType', label: 'Zone Type', required: false, type: 'string' },
               { key: 'level', label: 'Security Level', required: false, type: 'number' },
               { key: 'manager', label: 'Manager', required: false, type: 'string' },
-              { key: 'status', label: 'Status', required: false, type: 'enum', options: ['active', 'inactive'] },
             ]}
             exampleData={[
               {
                 name: 'Main Entrance',
                 location: 'Building A - Floor 1',
-                description: 'Main entrance lobby area',
                 zoneType: 'Green',
                 level: '2',
-                manager: 'John Doe',
-                status: 'active'
+                manager: 'John Smith'
               },
               {
                 name: 'Server Room',
                 location: 'Building B - Basement',
-                description: 'Data center and server infrastructure',
                 zoneType: 'Red',
-                level: '5',
-                manager: 'Jane Smith',
-                status: 'active'
+                level: '4',
+                manager: 'Jane Doe'
               }
             ]}
             onImport={handleImportZones}
@@ -271,6 +289,12 @@ export default function ZonesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AssignZoneManagerDialog 
+        open={managerDialogOpen} 
+        onOpenChange={setManagerDialogOpen} 
+        zone={selectedZone} 
+      />
     </div>
   )
 }

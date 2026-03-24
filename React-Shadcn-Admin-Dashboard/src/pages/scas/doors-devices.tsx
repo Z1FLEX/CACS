@@ -15,18 +15,16 @@ import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
 const doorColumns: ColumnConfig[] = [
   { key: 'name', label: 'Door Name', visible: true },
   { key: 'zoneName', label: 'Zone', visible: true },
-  { key: 'status', label: 'Status', visible: true },
-  { key: 'lastActivity', label: 'Last Activity', visible: true },
+  { key: 'location', label: 'Location', visible: true },
   { key: 'actions', label: 'Actions', visible: true },
 ]
 
 const deviceColumns: ColumnConfig[] = [
   { key: 'name', label: 'Device Name', visible: true },
   { key: 'type', label: 'Type', visible: true },
-  { key: 'doorName', label: 'Linked Door', visible: true },
-  { key: 'location', label: 'Location', visible: true },
+  { key: 'doorNames', label: 'Linked Doors', visible: true },
   { key: 'status', label: 'Status', visible: true },
-  { key: 'lastHeartbeat', label: 'Last Heartbeat', visible: true },
+  { key: 'lastActivity', label: 'Last Activity', visible: true },
   { key: 'actions', label: 'Actions', visible: true },
 ]
 
@@ -92,8 +90,7 @@ export default function DoorsDevicesPage() {
           name: row.name,
           zoneId: row.zoneId || '',
           zoneName: row.zoneName || '',
-          status: row.status || 'online',
-          lastActivity: new Date().toISOString(),
+          location: row.location || '',
         }
         
         await addDoor(newDoor)
@@ -116,11 +113,10 @@ export default function DoorsDevicesPage() {
           id: String(Date.now() + Math.random()),
           name: row.name,
           type: row.type || 'reader',
-          doorId: row.doorId || '',
-          doorName: row.doorName || '',
-          location: row.location || '',
+          doorIds: row.doorIds ? (Array.isArray(row.doorIds) ? row.doorIds : [row.doorIds]) : [],
+          doorNames: row.doorNames ? (Array.isArray(row.doorNames) ? row.doorNames : [row.doorNames]) : [],
           status: row.status || 'online',
-          lastHeartbeat: new Date().toISOString(),
+          lastActivity: new Date().toISOString(),
         }
         
         await addDevice(newDevice)
@@ -185,11 +181,6 @@ export default function DoorsDevicesPage() {
                           <TableRow key={door.id}>
                             {visibleColumns.map(col => (
                               <TableCell key={`${door.id}-${col.key}`}>
-                                {col.key === 'status' && (
-                                  <Badge variant={door.status === 'online' ? 'default' : 'destructive'}>
-                                    {door.status}
-                                  </Badge>
-                                )}
                                 {col.key === 'name' && <span className='font-medium'>{door.name}</span>}
                                 {col.key === 'actions' && (
                                   <div className='flex gap-2'>
@@ -209,10 +200,10 @@ export default function DoorsDevicesPage() {
                                     </Button>
                                   </div>
                                 )}
-                                {!['status', 'name', 'actions'].includes(col.key) && (
+                                {!['name', 'actions'].includes(col.key) && (
                                   <>
                                     {col.key === 'zoneName' && door.zoneName}
-                                    {col.key === 'lastActivity' && door.lastActivity}
+                                    {col.key === 'location' && door.location}
                                   </>
                                 )}
                               </TableCell>
@@ -249,7 +240,7 @@ export default function DoorsDevicesPage() {
                 data={devices}
                 columns={deviceColumns}
                 itemsPerPage={10}
-                searchableFields={['name', 'type', 'location', 'doorName']}
+                searchableFields={['name', 'type', 'doorNames']}
               >
                 {({ data, visibleColumns }) => (
                   <div className='overflow-x-auto'>
@@ -293,9 +284,20 @@ export default function DoorsDevicesPage() {
                                 {!['status', 'name', 'actions'].includes(col.key) && (
                                   <>
                                     {col.key === 'type' && device.type}
-                                    {col.key === 'doorName' && <span className='font-medium'>{device.doorName}</span>}
-                                    {col.key === 'location' && device.location}
-                                    {col.key === 'lastHeartbeat' && device.lastHeartbeat}
+                                    {col.key === 'doorNames' && (
+                                      <div className='space-y-1'>
+                                        {device.doorNames && device.doorNames.length > 0 ? (
+                                          device.doorNames.map((doorName: string, index: number) => (
+                                            <span key={index} className='inline-block bg-gray-100 rounded px-2 py-1 text-xs mr-1'>
+                                              {doorName}
+                                            </span>
+                                          ))
+                                        ) : (
+                                          <span className='text-gray-500'>No doors linked</span>
+                                        )}
+                                      </div>
+                                    )}
+                                    {col.key === 'lastActivity' && device.lastActivity}
                                   </>
                                 )}
                               </TableCell>
@@ -323,20 +325,20 @@ export default function DoorsDevicesPage() {
           { key: 'name', label: 'Door Name', required: true, type: 'string' },
           { key: 'zoneId', label: 'Zone ID', required: false, type: 'string' },
           { key: 'zoneName', label: 'Zone Name', required: false, type: 'string' },
-          { key: 'status', label: 'Status', required: false, type: 'enum', options: ['online', 'offline'] },
+          { key: 'location', label: 'Location', required: false, type: 'string' },
         ]}
         exampleData={[
           {
             name: 'Main Entrance',
             zoneId: 'zone1',
             zoneName: 'Reception',
-            status: 'online'
+            location: 'Building A - Floor 1'
           },
           {
             name: 'Server Room Door',
             zoneId: 'zone2',
             zoneName: 'Server Room',
-            status: 'online'
+            location: 'Building B - Basement'
           }
         ]}
         onImport={handleImportDoors}
@@ -350,27 +352,24 @@ export default function DoorsDevicesPage() {
         description='Bulk import devices from a CSV file. Devices will be created with the provided information.'
         fields={[
           { key: 'name', label: 'Device Name', required: true, type: 'string' },
-          { key: 'type', label: 'Device Type', required: false, type: 'enum', options: ['reader', 'lock', 'sensor', 'camera'] },
-          { key: 'doorId', label: 'Door ID', required: false, type: 'string' },
-          { key: 'doorName', label: 'Door Name', required: false, type: 'string' },
-          { key: 'location', label: 'Location', required: false, type: 'string' },
-          { key: 'status', label: 'Status', required: false, type: 'enum', options: ['online', 'offline', 'maintenance'] },
+          { key: 'type', label: 'Device Type', required: false, type: 'enum', options: ['reader', 'controller', 'lock'] },
+          { key: 'doorIds', label: 'Door IDs', required: false, type: 'string' },
+          { key: 'doorNames', label: 'Door Names', required: false, type: 'string' },
+          { key: 'status', label: 'Status', required: false, type: 'enum', options: ['online', 'offline'] },
         ]}
         exampleData={[
           {
             name: 'Main Entrance Reader',
             type: 'reader',
-            doorId: 'door1',
-            doorName: 'Main Entrance',
-            location: 'Building A - Floor 1',
+            doorIds: 'door1,door2',
+            doorNames: 'Main Entrance,Side Entrance',
             status: 'online'
           },
           {
             name: 'Server Room Lock',
             type: 'lock',
-            doorId: 'door2',
-            doorName: 'Server Room Door',
-            location: 'Building B - Basement',
+            doorIds: 'door3',
+            doorNames: 'Server Room Door',
             status: 'online'
           }
         ]}

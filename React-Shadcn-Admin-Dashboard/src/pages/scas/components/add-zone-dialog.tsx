@@ -37,10 +37,8 @@ const typeToLevel: Record<string, 0 | 1 | 2 | 3 | 4 | 5> = {
 
 const schema = z.object({
   name: z.string().min(1, 'Zone name is required'),
-  description: z.string().optional(),
-  doorsCount: z.number().min(0).optional(),
+  location: z.string().optional(),
   zoneType: z.enum(['White', 'Green', 'Blue', 'Orange', 'Red', 'Black']),
-  status: z.enum(['active', 'inactive']).optional(),
   manager: z.string().optional(),
 })
 type FormValues = z.infer<typeof schema>
@@ -54,17 +52,15 @@ interface Props {
 import { useEffect } from 'react'
 
 export default function AddZoneDialog({ open, onOpenChange, current }: Props) {
-  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { status: 'active', doorsCount: 0 } })
+  const form = useForm<FormValues>({ resolver: zodResolver(schema) })
 
   useEffect(() => {
     if (current) {
       const zoneTypeName = current.zoneType && typeof current.zoneType === 'object' && 'name' in current.zoneType ? current.zoneType.name : undefined
       form.reset({
         name: current.name,
-        description: current.description,
-        doorsCount: current.doorsCount,
+        location: current.location || current.description, // Use description as fallback for existing zones
         zoneType: zoneTypeName as FormValues['zoneType'],
-        status: current.status,
         manager: current.manager,
       })
     }
@@ -75,9 +71,7 @@ export default function AddZoneDialog({ open, onOpenChange, current }: Props) {
       const updated = {
         ...current,
         name: vals.name,
-        description: vals.description || '',
-        doorsCount: vals.doorsCount || 0,
-        status: vals.status || 'active',
+        location: vals.location || '',
         manager: vals.manager || undefined,
         zoneType: { name: vals.zoneType, level: typeToLevel[vals.zoneType] },
       }
@@ -87,9 +81,7 @@ export default function AddZoneDialog({ open, onOpenChange, current }: Props) {
       const newZone = {
         id,
         name: vals.name,
-        description: vals.description || '',
-        doorsCount: vals.doorsCount || 0,
-        status: vals.status || 'active',
+        location: vals.location || '',
         manager: vals.manager || undefined,
         zoneType: {
           name: vals.zoneType,
@@ -149,26 +141,12 @@ export default function AddZoneDialog({ open, onOpenChange, current }: Props) {
 
             <FormField
               control={form.control}
-              name='description'
+              name='location'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Location</FormLabel>
                   <FormControl>
-                    <Input placeholder='Short description' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='doorsCount'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Doors Count</FormLabel>
-                  <FormControl>
-                    <Input type='number' {...field} />
+                    <Input placeholder='Location' {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

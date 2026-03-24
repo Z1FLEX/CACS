@@ -12,7 +12,7 @@ import { Button } from '@/components/custom/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
 import type { User, AccessCard } from '@/types/scas'
-import { subscribeAccessCards, getAccessCards, loadAccessCards, updateUser, updateAccessCard } from '@/services'
+import { subscribeAccessCards, getAccessCards, loadAccessCards, updateUser } from '@/services'
 import FindCardDialog from './find-card-dialog'
 import { IconSearch, IconLoader } from '@tabler/icons-react'
 
@@ -31,7 +31,7 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
   const [cards, setCards] = useState<AccessCard[]>(() => getAccessCards())
   const [isAssigning, setIsAssigning] = useState(false)
   const [findCardOpen, setFindCardOpen] = useState(false)
-  const [scanStatus, setScanStatus] = useState<'waiting' | 'detected' | 'assigning'>('waiting')
+  const [scanStatus, setScanStatus] = useState<'waiting' | 'detected' | 'not_found' | 'assigning'>('waiting')
   const inputRef = useRef<HTMLInputElement>(null)
   const focusIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const { toast } = useToast()
@@ -92,9 +92,16 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
     const value = e.target.value
     form.setValue('uid', value)
     
-    // Show detected status when UID is entered
+    // Check if card exists when UID is entered
     if (value.trim()) {
-      setScanStatus('detected')
+      const card = cards.find(c => 
+        c.cardNumber === value.trim() || c.uid === value.trim()
+      )
+      if (card) {
+        setScanStatus('detected')
+      } else {
+        setScanStatus('not_found')
+      }
     } else {
       setScanStatus('waiting')
     }
@@ -103,27 +110,24 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
   const handleAssignCard = async (uid: string) => {
     if (!user) return
 
+    // First check if card exists
+    const card = cards.find(c => 
+      c.cardNumber === uid || c.uid === uid
+    )
+
+    if (!card) {
+      setScanStatus('not_found')
+      // Show a more user-friendly error message instead of browser alert
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 100)
+      return
+    }
+
     setIsAssigning(true)
     setScanStatus('assigning')
 
     try {
-      // Find the card by UID
-      const card = cards.find(c => 
-        c.cardNumber === uid || c.uid === uid
-      )
-
-      if (!card) {
-        toast({
-          title: 'Card not found',
-          description: `Card with UID "${uid}" does not exist. Please create the card first in the Access Cards page.`,
-          variant: 'destructive',
-        })
-        setScanStatus('waiting')
-        form.reset()
-        inputRef.current?.focus()
-        return
-      }
-
       // Check if card is already assigned to another user
       if (card.userId && card.userId !== user.id) {
         toast({
@@ -131,7 +135,7 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
           description: `Card ${card.cardNumber} is already assigned to another user.`,
           variant: 'destructive',
         })
-        setScanStatus('waiting')
+        setScanStatus('not_found')
         form.reset()
         inputRef.current?.focus()
         return
@@ -144,36 +148,14 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
           description: `Card ${card.cardNumber} is already assigned to ${user.name}.`,
           variant: 'destructive',
         })
-        setScanStatus('waiting')
+        setScanStatus('detected')
         form.reset()
         inputRef.current?.focus()
         return
       }
 
-      // Unassign any existing card from the user
-      if (user.cardId) {
-        const existingCard = cards.find(c => c.id === user.cardId)
-        if (existingCard) {
-          await updateAccessCard({
-            ...existingCard,
-            userId: undefined,
-            userName: undefined,
-          })
-        }
-      }
-
-      // Assign the new card to the user
-      await Promise.all([
-        updateUser({
-          ...user,
-          cardId: card.id,
-        }),
-        updateAccessCard({
-          ...card,
-          userId: user.id,
-          userName: user.name,
-        })
-      ])
+      // Link is stored on the user row (access_card_id); card DTO userId is derived server-side
+      await updateUser({ ...user, cardId: card.id })
 
       toast({
         title: 'Card assigned successfully',
@@ -188,8 +170,7 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
         description: 'Failed to assign card. Please try again.',
         variant: 'destructive',
       })
-      setScanStatus('waiting')
-      form.reset()
+      setScanStatus('detected')
       inputRef.current?.focus()
     } finally {
       setIsAssigning(false)
@@ -220,6 +201,13 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
           <div className='flex items-center gap-2 text-green-600'>
             <div className='w-2 h-2 bg-green-600 rounded-full'></div>
             <span className='text-sm'>Card detected</span>
+          </div>
+        )
+      case 'not_found':
+        return (
+          <div className='flex items-center gap-2 text-red-600'>
+            <div className='w-2 h-2 bg-red-600 rounded-full'></div>
+            <span className='text-sm'>Card not found</span>
           </div>
         )
       case 'assigning':

@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/custom/button'
 import { SelectDropdown } from '@/components/select-dropdown'
 import type { Zone } from '@/types/scas'
-import { addZone, updateZone } from '@/services'
+import { addZone, updateZone, zoneTypeForUi, zoneTypeNameToId } from '@/services'
 
 const zoneTypes = [
   { label: 'White', value: 'White' },
@@ -52,21 +52,28 @@ interface Props {
 import { useEffect } from 'react'
 
 export default function AddZoneDialog({ open, onOpenChange, current }: Props) {
-  const form = useForm<FormValues>({ resolver: zodResolver(schema) })
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { name: '', location: '', zoneType: 'White', manager: '' },
+  })
 
   useEffect(() => {
     if (current) {
-      const zoneTypeName = current.zoneType && typeof current.zoneType === 'object' && 'name' in current.zoneType ? current.zoneType.name : undefined
+      const disp = zoneTypeForUi(current)
+      const zoneTypeName = (disp?.name ?? 'White') as FormValues['zoneType']
       form.reset({
         name: current.name,
-        location: current.location || current.description, // Use description as fallback for existing zones
-        zoneType: zoneTypeName as FormValues['zoneType'],
+        location: current.location || current.description,
+        zoneType: zoneTypeName,
         manager: current.manager,
       })
+    } else if (open) {
+      form.reset({ name: '', location: '', zoneType: 'White', manager: '' })
     }
-  }, [current])
+  }, [current, open, form])
 
   const onSubmit = async (vals: FormValues) => {
+    const tid = zoneTypeNameToId(vals.zoneType)
     if (current) {
       const updated = {
         ...current,
@@ -74,22 +81,17 @@ export default function AddZoneDialog({ open, onOpenChange, current }: Props) {
         location: vals.location || '',
         manager: vals.manager || undefined,
         zoneType: { name: vals.zoneType, level: typeToLevel[vals.zoneType] },
+        ...(tid != null ? { zoneTypeId: String(tid) } : {}),
       }
       await updateZone(updated)
     } else {
-      const id = String(Date.now())
-      const newZone = {
-        id,
+      await addZone({
+        id: '',
         name: vals.name,
         location: vals.location || '',
-        manager: vals.manager || undefined,
-        zoneType: {
-          name: vals.zoneType,
-          level: typeToLevel[vals.zoneType],
-        },
-      }
-
-      await addZone(newZone as any)
+        zoneType: { name: vals.zoneType, level: typeToLevel[vals.zoneType] },
+        ...(tid != null ? { zoneTypeId: String(tid) } : {}),
+      })
     }
 
     form.reset()
@@ -132,7 +134,12 @@ export default function AddZoneDialog({ open, onOpenChange, current }: Props) {
                 <FormItem>
                   <FormLabel>Zone Type</FormLabel>
                   <FormControl>
-                    <SelectDropdown items={zoneTypes} defaultValue={field.value} onValueChange={field.onChange} />
+                    <SelectDropdown
+                      isControlled
+                      items={zoneTypes}
+                      defaultValue={field.value ?? 'White'}
+                      onValueChange={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

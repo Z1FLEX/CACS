@@ -50,6 +50,13 @@ export default function UsersPage() {
     return unsub
   }, [])
 
+  // Keep details dialog in sync when user list refreshes (e.g. after card unassign)
+  useEffect(() => {
+    if (!detailsOpen || !selectedUser) return
+    const fresh = users.find((u) => u.id === selectedUser.id)
+    if (fresh) setSelectedUser(fresh)
+  }, [users, detailsOpen, selectedUser?.id])
+
   const handleAddUser = () => setOpen(true)
 
   const handleViewUser = (id: string) => {

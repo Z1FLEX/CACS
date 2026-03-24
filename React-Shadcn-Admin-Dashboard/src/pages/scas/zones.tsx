@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/custom/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,19 +16,29 @@ import {
 import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-wrapper'
 import { EmptyState } from '@/components/custom/empty-state'
 import type { Zone } from '@/types/scas'
-import { subscribeZones, getZones, loadZones, removeZone, addZone } from '@/services'
+import { subscribeZones, getZones, loadZones, removeZone, addZone, zoneTypeForUi } from '@/services'
 import AddZoneDialog from './components/add-zone-dialog'
 import AssignZoneManagerDialog from './components/assign-zone-manager-dialog'
 import CSVImportDialog from '@/components/custom/csv-import-dialog'
 import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
 
-const zoneTypeColorMap: Record<string, string> = {
-  'White': 'bg-gray-100 text-gray-800 border-gray-300',
-  'Green': 'bg-green-100 text-green-800 border-green-300',
-  'Blue': 'bg-blue-100 text-blue-800 border-blue-300',
-  'Orange': 'bg-orange-100 text-orange-800 border-orange-300',
-  'Red': 'bg-red-100 text-red-800 border-red-300',
-  'Black': 'bg-gray-900 text-gray-50 border-gray-900',
+/**
+ * Same pattern as users page (e.g. card column): Badge + explicit bg/text classes.
+ * Keys match API zone_type.name; values must stay literal strings for Tailwind JIT.
+ */
+const zoneTypeBadgeClass: Record<string, string> = {
+  White: 'border-transparent bg-zinc-200 text-zinc-900 hover:bg-zinc-300',
+  Green: 'border-transparent bg-green-600 text-white hover:bg-green-700',
+  Blue: 'border-transparent bg-blue-600 text-white hover:bg-blue-700',
+  Orange: 'border-transparent bg-orange-500 text-white hover:bg-orange-600',
+  Red: 'border-transparent bg-red-600 text-white hover:bg-red-700',
+  Black: 'border-transparent bg-zinc-900 text-zinc-50 hover:bg-zinc-800',
+}
+
+function zoneTypeBadgeKey(name: string): string {
+  const t = name.trim()
+  if (!t) return ''
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()
 }
 
 const zoneColumns: ColumnConfig[] = [
@@ -54,6 +63,12 @@ export default function ZonesPage() {
     loadZones().then(() => {})
     return unsub
   }, [])
+
+  useEffect(() => {
+    if (!managerDialogOpen || !selectedZone) return
+    const fresh = zones.find((z) => z.id === selectedZone.id)
+    if (fresh) setSelectedZone(fresh)
+  }, [zones, managerDialogOpen, selectedZone?.id])
 
   const handleAddZone = () => setOpen(true)
 
@@ -158,46 +173,38 @@ export default function ZonesPage() {
                   </TableHeader>
                   <TableBody>
                     {data.map((zone) => (
-                      <TableRow key={zone.id}>
+                      <TableRow 
+                        key={zone.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleAssignManager(zone)}
+                      >
                         {visibleColumns.map(col => (
                           <TableCell key={`${zone.id}-${col.key}`}>
-                            {col.key === 'zoneType' && zone.zoneType && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge
-                                      variant='outline'
-                                      className={`capitalize ${
-                                        zoneTypeColorMap[
-                                          typeof zone.zoneType === 'object' 
-                                            ? zone.zoneType.name 
-                                            : zone.zoneType
-                                        ] || 'bg-gray-100 text-gray-800 border-gray-300'
-                                      }`}
-                                    >
-                                      {typeof zone.zoneType === 'object' 
-                                        ? zone.zoneType.name 
-                                        : zone.zoneType
-                                      }
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Security Level: {
-                                      typeof zone.zoneType === 'object' 
-                                        ? zone.zoneType.level 
-                                        : 'N/A'
-                                    }</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
+                            {col.key === 'zoneType' &&
+                              (() => {
+                                const disp = zoneTypeForUi(zone)
+                                if (!disp) {
+                                  return <span className='text-sm text-muted-foreground'>—</span>
+                                }
+                                const key = zoneTypeBadgeKey(disp.name)
+                                const label = disp.name.toLowerCase()
+                                return (
+                                  <Badge
+                                    variant='default'
+                                    title={`Security level: ${disp.level}`}
+                                    className={
+                                      zoneTypeBadgeClass[key] ??
+                                      'border-transparent bg-muted text-muted-foreground hover:bg-muted/80'
+                                    }
+                                  >
+                                    {label}
+                                  </Badge>
+                                )
+                              })()}
                             {col.key === 'name' && (
-                              <button
-                                className='font-medium text-blue-600 hover:text-blue-800 hover:underline'
-                                onClick={() => handleAssignManager(zone)}
-                              >
+                              <span className='font-medium text-blue-600'>
                                 {zone.name}
-                              </button>
+                              </span>
                             )}
                             {col.key === 'manager' && (
                               <span className={zone.manager ? 'font-medium' : 'text-gray-500'}>
@@ -205,7 +212,7 @@ export default function ZonesPage() {
                               </span>
                             )}
                             {col.key === 'actions' && (
-                              <div className='flex gap-2'>
+                              <div className='flex gap-2' onClick={(e) => e.stopPropagation()}>
                                 <Button
                                   variant='ghost'
                                   size='sm'

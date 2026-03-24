@@ -17,13 +17,16 @@ public class ZoneDTO extends BaseDTO {
     private String location;
     private Integer zoneTypeId;
     private Map<String, Object> zoneType;
+    private String manager;
     
-    public ZoneDTO(Integer id, String name, String location, Integer zoneTypeId, Map<String, Object> zoneType, Instant createdAt) {
+    public ZoneDTO(Integer id, String name, String location, Integer zoneTypeId,
+                   Map<String, Object> zoneType, String manager, Instant createdAt) {
         this.id = id;
         this.name = name;
         this.location = location;
         this.zoneTypeId = zoneTypeId;
         this.zoneType = zoneType;
+        this.manager = manager;
         this.createdAt = createdAt;
     }
 }

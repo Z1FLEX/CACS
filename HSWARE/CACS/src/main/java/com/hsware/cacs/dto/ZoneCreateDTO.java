@@ -18,4 +18,7 @@ public class ZoneCreateDTO {
     private String location;
     
     private Integer zoneTypeId;
+
+    /** Set sole zone manager; omit to leave unassigned on create */
+    private Integer responsibleUserId;
 }

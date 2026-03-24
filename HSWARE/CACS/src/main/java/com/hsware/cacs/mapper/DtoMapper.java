@@ -7,10 +7,12 @@ import com.hsware.cacs.repository.DoorRepository;
 import com.hsware.cacs.repository.ProfileRepository;
 import com.hsware.cacs.repository.UserRepository;
 import com.hsware.cacs.repository.ZoneRepository;
+import com.hsware.cacs.repository.ZoneTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -21,6 +23,7 @@ public class DtoMapper {
     private final AccessCardRepository accessCardRepository;
     private final ProfileRepository profileRepository;
     private final ZoneRepository zoneRepository;
+    private final ZoneTypeRepository zoneTypeRepository;
     private final DoorRepository doorRepository;
     private final UserRepository userRepository;
 
@@ -198,43 +201,70 @@ public class DtoMapper {
 
     public ZoneDTO toZoneDTO(Zone zone) {
         if (zone == null) return null;
-        
+
         Map<String, Object> zoneTypeMap = null;
         if (zone.getZoneType() != null) {
             ZoneType t = zone.getZoneType();
-            zoneTypeMap = Map.of("id", t.getId(), "name", nullToEmpty(t.getName()), "level", t.getSecurityLevel() != null ? t.getSecurityLevel() : 0);
-        } else {
-            zoneTypeMap = Map.of("name", "", "level", 0);
+            zoneTypeMap = Map.of(
+                    "id", t.getId(),
+                    "name", nullToEmpty(t.getName()),
+                    "level", t.getSecurityLevel() != null ? t.getSecurityLevel() : 0);
         }
-        
+
+        String managerDisplay = null;
+        List<User> managers = userRepository.findByResponsibleZones_IdAndDeletedAtIsNull(zone.getId());
+        if (!managers.isEmpty()) {
+            managerDisplay = userDisplayName(managers.get(0));
+        }
+
         return new ZoneDTO(
-            zone.getId(),
-            nullToEmpty(zone.getName()),
-            nullToEmpty(zone.getLocation()),
-            zone.getZoneType() != null ? zone.getZoneType().getId() : null,
-            zoneTypeMap,
-            zone.getCreatedAt()
-        );
+                zone.getId(),
+                nullToEmpty(zone.getName()),
+                nullToEmpty(zone.getLocation()),
+                zone.getZoneType() != null ? zone.getZoneType().getId() : null,
+                zoneTypeMap,
+                managerDisplay != null && !managerDisplay.isEmpty() ? managerDisplay : null,
+                zone.getCreatedAt());
     }
 
     public Zone toZone(ZoneCreateDTO dto) {
         if (dto == null) return null;
-        
+
         Zone zone = new Zone();
         zone.setName(dto.getName());
         zone.setLocation(dto.getLocation());
-        
+
+        if (dto.getZoneTypeId() != null) {
+            if (dto.getZoneTypeId() == 0) {
+                zone.setZoneType(null);
+            } else {
+                zoneTypeRepository.findById(dto.getZoneTypeId()).ifPresent(zone::setZoneType);
+            }
+        }
+
         return zone;
     }
 
     public void updateZoneFromDTO(ZoneUpdateDTO dto, Zone zone) {
         if (dto == null || zone == null) return;
-        
+
         if (dto.getName() != null) zone.setName(dto.getName());
         if (dto.getLocation() != null) zone.setLocation(dto.getLocation());
         if (dto.getZoneTypeId() != null) {
-            // Note: ZoneType repository would need to be injected if this is needed
+            if (dto.getZoneTypeId() == 0) {
+                zone.setZoneType(null);
+            } else {
+                zoneTypeRepository.findById(dto.getZoneTypeId()).ifPresent(zone::setZoneType);
+            }
         }
+    }
+
+    private String userDisplayName(User user) {
+        String name = (nullToEmpty(user.getFirstName()) + " " + nullToEmpty(user.getLastName())).trim();
+        if (name.isEmpty()) {
+            name = nullToEmpty(user.getEmail());
+        }
+        return name;
     }
 
     private String nullToEmpty(String s) {

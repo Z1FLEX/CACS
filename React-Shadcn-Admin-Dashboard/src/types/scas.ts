@@ -89,6 +89,8 @@ export interface Zone {
   /** ZoneType or inline display shape { name, level } */
   zoneType?: ZoneType | { name: string; level: number }
   manager?: string
+  /** Only for API mutations: sets zone_responsibility (sole manager); "0" clears */
+  responsibleUserId?: string
 }
 
 // ---------------------------------------------------------------------------

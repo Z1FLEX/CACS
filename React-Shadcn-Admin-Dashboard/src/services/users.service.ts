@@ -49,8 +49,18 @@ export async function addUser(user: User): Promise<void> {
   await loadUsers()
 }
 
+/** Build JSON body for PUT /api/users — backend expects numeric cardId; 0 clears access_card_id */
+function userToApiBody(user: User): Record<string, unknown> {
+  const body: Record<string, unknown> = { ...user }
+  if (body.cardId !== undefined && body.cardId !== null && body.cardId !== '') {
+    const n = Number(body.cardId)
+    if (!Number.isNaN(n)) body.cardId = n
+  }
+  return body
+}
+
 export async function updateUser(user: User): Promise<void> {
-  await apiUpdateUser(user.id, user)
+  await apiUpdateUser(user.id, userToApiBody(user) as Partial<User>)
   await loadUsers()
 }
 

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/custom/button'
 import { Badge } from '@/components/ui/badge'
 import type { User, Zone } from '@/types/scas'
-import { getUsers, subscribeUsers, updateZone } from '@/services'
+import { getUsers, subscribeUsers, loadUsers, updateZone } from '@/services'
 
 interface Props {
   open: boolean
@@ -26,6 +26,7 @@ export default function AssignZoneManagerDialog({ open, onOpenChange, zone }: Pr
 
   useEffect(() => {
     const unsub = subscribeUsers(setUsers)
+    loadUsers().then(() => {})
     return unsub
   }, [])
 
@@ -39,11 +40,10 @@ export default function AssignZoneManagerDialog({ open, onOpenChange, zone }: Pr
     if (!zone || !selectedUser) return
 
     try {
-      const updated = {
+      await updateZone({
         ...zone,
-        manager: selectedUser.name,
-      }
-      await updateZone(updated)
+        responsibleUserId: selectedUser.id,
+      })
       onOpenChange(false)
       setSelectedUser(null)
       setSearchTerm('')

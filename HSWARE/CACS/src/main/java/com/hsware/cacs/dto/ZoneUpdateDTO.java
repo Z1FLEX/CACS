@@ -16,4 +16,7 @@ public class ZoneUpdateDTO {
     private String location;
     
     private Integer zoneTypeId;
+
+    /** 0 = clear managers; positive id = set sole manager; omit = no change */
+    private Integer responsibleUserId;
 }

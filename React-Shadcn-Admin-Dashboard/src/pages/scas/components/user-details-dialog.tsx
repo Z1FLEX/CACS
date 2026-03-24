@@ -12,7 +12,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
 import type { User, AccessCard } from '@/types/scas'
-import { subscribeAccessCards, getAccessCards, loadAccessCards, updateUser, updateAccessCard } from '@/services'
+import { subscribeAccessCards, getAccessCards, loadAccessCards, updateUser } from '@/services'
 import AssignCardDialog from './assign-card-dialog'
 import { IconCreditCard, IconTrash, IconPlus } from '@tabler/icons-react'
 
@@ -39,18 +39,9 @@ export default function UserDetailsDialog({ open, onOpenChange, user }: Props) {
     if (!user || !userCard) return
 
     try {
-      // Update user to remove card assignment
-      await updateUser({
-        ...user,
-        cardId: undefined,
-      })
-
-      // Update card to remove user assignment
-      await updateAccessCard({
-        ...userCard,
-        userId: undefined,
-        userName: undefined,
-      })
+      // Backend clears access_card when cardId is 0; JSON string "0" coerces to Integer 0
+      await updateUser({ ...user, cardId: '0' })
+      await loadAccessCards()
 
       toast({
         title: 'Card unassigned',

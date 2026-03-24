@@ -15,4 +15,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> findByAccessCard_Id(Integer accessCardId);
 
     Optional<User> findByEmailAndDeletedAtIsNull(String email);
+
+    /** Users responsible for this zone (zone_responsibility join) */
+    java.util.List<User> findByResponsibleZones_IdAndDeletedAtIsNull(Integer zoneId);
 }

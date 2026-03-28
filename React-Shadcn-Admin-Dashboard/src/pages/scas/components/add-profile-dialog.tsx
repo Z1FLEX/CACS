@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog'
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
@@ -129,10 +128,23 @@ export default function AddProfileDialog({ open, onOpenChange, current }: Props)
       }
 
       if (current) {
-        const updated = { ...current, ...profilePayload }
+        const updated = { 
+          ...current, 
+          name: profileData.name,
+          scheduleId: profilePayload.scheduleId ? String(profilePayload.scheduleId) : undefined,
+          zoneIds: profileData.zoneIds
+        }
         await updateProfile(updated)
       } else {
-        await addProfile(profilePayload as Profile)
+        // Create a proper Profile object for the API
+        const newProfile = {
+          id: String(Date.now()),
+          name: profileData.name,
+          scheduleId: profilePayload.scheduleId ? String(profilePayload.scheduleId) : undefined,
+          zoneIds: profileData.zoneIds,
+          createdAt: new Date().toISOString(),
+        } as Profile
+        await addProfile(newProfile)
       }
 
       onOpenChange(false)

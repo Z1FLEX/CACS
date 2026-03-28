@@ -1,28 +1,20 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRef, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
-import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import { EventClickArg } from '@fullcalendar/core'
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Trash2, X } from 'lucide-react'
-import { cn } from "@/lib/utils"
-import { Calendar } from "@/components/ui/calendar"
+import { Trash2, X } from 'lucide-react'
 import { addMinutes, format } from "date-fns"
 import { Button } from '@/components/custom/button'
 import { toast } from '@/components/ui/use-toast'
 import { CalendarEvent } from './data/schema'
-import { initialEvents } from './data/calendar'
 
 export default function SchedulesPage() {
   const calendarRef = useRef<FullCalendar>(null)
-  const [calendarView, setCalendarView] = useState<string>("dayGridMonth")
-  const [isEventModalOpen, setIsEventModalOpen] = useState<boolean>(false)
-  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentEvent, setCurrentEvent] = useState<CalendarEvent | null>(null)
-  const [calendarTitle, setCalendarTitle] = useState<string>('');
+  const [isEventModalOpen, setIsEventModalOpen] = useState<boolean>(false)
 
   const handleEventClick = (clickInfo: EventClickArg) => {
     const event = clickInfo.event
@@ -77,43 +69,6 @@ export default function SchedulesPage() {
     }
   }
 
-  const handleViewChange = (view: string) => {
-    setCalendarView(view)
-    const calendarApi = calendarRef.current?.getApi()
-    calendarApi?.changeView(view)
-  }
-
-  const updateCalendarTitle = useCallback(() => {
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      setCalendarTitle(calendarApi.view.title);
-    }
-  }, []);
-
-  const changeCalendarView = useCallback((direction: 'prev' | 'next') => {
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      if (direction === 'prev') {
-        calendarApi.prev();
-      } else {
-        calendarApi.next();
-      }
-      updateCalendarTitle();
-    }
-  }, [updateCalendarTitle]);
-
-  const goToToday = useCallback(() => {
-    const calendarApi = calendarRef.current?.getApi();
-    if (calendarApi) {
-      calendarApi.gotoDate(new Date());
-      updateCalendarTitle();
-    }
-  }, [updateCalendarTitle]);
-
-  useEffect(() => {
-    updateCalendarTitle();
-  }, [updateCalendarTitle]);
-
   const renderEventContent = (eventInfo: any) => {
     const event = eventInfo.event
     const startDate = event.start instanceof Date ? event.start : new Date(event.start)
@@ -133,51 +88,22 @@ export default function SchedulesPage() {
     )
   }
 
-
-
   return (
     <div className="flex h-screen overflow-auto no-scrollbar">
       <div className="flex-1 p-4">
         <div className="rounded-lg shadow p-4">
           <div className="flex justify-between items-center mb-4 gap-2">
             <div className="flex items-center space-x-2">
-              <Button variant='outline' onClick={() => changeCalendarView('prev')}>Prev</Button>
-              <Button variant='outline'>{calendarTitle}</Button>
-              <Button variant='outline' onClick={() => changeCalendarView('next')}>Next</Button>
-              <Button variant='outline' onClick={goToToday}>Today</Button>
+              <h2 className="text-2xl font-bold tracking-tight">Weekly Schedule</h2>
             </div>
             <div className="space-x-2 flex items-center">
-              <Button
-                variant={calendarView === 'dayGridDay' ? 'destructive' : 'outline'}
-                onClick={() => handleViewChange('dayGridDay')}
-              >
-                Daily
-              </Button>
-              <Button
-                variant={calendarView === 'timeGridWeek' ? 'destructive' : 'outline'}
-                onClick={() => handleViewChange('timeGridWeek')}
-              >
-                Weekly
-              </Button>
-              <Button
-                variant={calendarView === 'dayGridMonth' ? 'destructive' : 'outline'}
-                onClick={() => handleViewChange('dayGridMonth')}
-              >
-                Monthly
-              </Button>
-              <Button
-                variant={calendarView === 'listWeek' ? 'destructive' : 'outline'}
-                onClick={() => handleViewChange('listWeek')}
-              >
-                List
-              </Button>
               <Button variant='outline' onClick={() => handleDateClick({ date: new Date() } as any)}>+ Add Event</Button>
             </div>
           </div>
           <FullCalendar
             ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
-            initialView={calendarView}
+            plugins={[timeGridPlugin, interactionPlugin]}
+            initialView="timeGridWeek"
             headerToolbar={false}
             allDaySlot={false}
             slotMinTime="08:00:00"
@@ -187,6 +113,13 @@ export default function SchedulesPage() {
             eventClick={handleEventClick}
             dateClick={handleDateClick}
             eventContent={renderEventContent}
+            views={{
+              timeGridWeek: {
+                titleFormat: { weekday: 'long' },
+                dayHeaderFormat: { weekday: 'short' }
+              }
+            }}
+            dayHeaderFormat={{ weekday: 'short' }}
           />
         </div>
       </div>
@@ -204,28 +137,6 @@ export default function SchedulesPage() {
               value={currentEvent.title}
               onChange={(e) => setCurrentEvent({ ...currentEvent, title: e.target.value })}
             />
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal mb-4",
-                    !currentEvent.start && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {currentEvent.start ? format(new Date(currentEvent.start), "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={new Date(currentEvent.start)}
-                  onSelect={(date) => date && setCurrentEvent({ ...currentEvent, start: date })}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
             <Input
               className="mb-4"
               placeholder="Start Time"

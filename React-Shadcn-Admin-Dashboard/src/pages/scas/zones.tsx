@@ -23,22 +23,27 @@ import CSVImportDialog from '@/components/custom/csv-import-dialog'
 import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
 
 /**
- * Same pattern as users page (e.g. card column): Badge + explicit bg/text classes.
- * Keys match API zone_type.name; values must stay literal strings for Tailwind JIT.
+ * Zone type badge styling with custom colors like the card column in users page
  */
-const zoneTypeBadgeClass: Record<string, string> = {
-  White: 'border-transparent bg-zinc-200 text-zinc-900 hover:bg-zinc-300',
-  Green: 'border-transparent bg-green-600 text-white hover:bg-green-700',
-  Blue: 'border-transparent bg-blue-600 text-white hover:bg-blue-700',
-  Orange: 'border-transparent bg-orange-500 text-white hover:bg-orange-600',
-  Red: 'border-transparent bg-red-600 text-white hover:bg-red-700',
-  Black: 'border-transparent bg-zinc-900 text-zinc-50 hover:bg-zinc-800',
-}
-
-function zoneTypeBadgeKey(name: string): string {
-  const t = name.trim()
-  if (!t) return ''
-  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()
+function zoneTypeBadgeProps(name: string) {
+  const k = name.trim().charAt(0).toUpperCase() + name.trim().slice(1).toLowerCase()
+  
+  switch (k) {
+    case 'White':
+      return { variant: 'outline' as const, className: 'bg-gray-100 hover:bg-gray-200 text-gray-800' }
+    case 'Green':
+      return { variant: 'default' as const, className: 'bg-green-600 hover:bg-green-700' }
+    case 'Blue':
+      return { variant: 'secondary' as const, className: 'bg-blue-600 hover:bg-blue-700 text-white' }
+    case 'Orange':
+      return { variant: 'secondary' as const, className: 'bg-orange-600 hover:bg-orange-700 text-white' }
+    case 'Red':
+      return { variant: 'destructive' as const, className: 'bg-red-600 hover:bg-red-700' }
+    case 'Black':
+      return { variant: 'outline' as const, className: 'bg-gray-900 hover:bg-gray-800 text-white' }
+    default:
+      return { variant: 'secondary' as const, className: 'bg-gray-600 hover:bg-gray-700 text-white' }
+  }
 }
 
 const zoneColumns: ColumnConfig[] = [
@@ -180,60 +185,48 @@ export default function ZonesPage() {
                       >
                         {visibleColumns.map(col => (
                           <TableCell key={`${zone.id}-${col.key}`}>
-                            {col.key === 'zoneType' &&
-                              (() => {
-                                const disp = zoneTypeForUi(zone)
-                                if (!disp) {
-                                  return <span className='text-sm text-muted-foreground'>—</span>
+                            {(() => {
+                              switch (col.key) {
+                                case 'zoneType': {
+                                  const zt = zoneTypeForUi(zone)
+                                  return zt ? (
+                                    <Badge {...zoneTypeBadgeProps(zt.name)}>
+                                      {zt.name.toUpperCase()}
+                                    </Badge>
+                                  ) : (
+                                    <span className='text-sm text-muted-foreground'>—</span>
+                                  )
                                 }
-                                const key = zoneTypeBadgeKey(disp.name)
-                                const label = disp.name.toLowerCase()
-                                return (
-                                  <Badge
-                                    variant='default'
-                                    title={`Security level: ${disp.level}`}
-                                    className={
-                                      zoneTypeBadgeClass[key] ??
-                                      'border-transparent bg-muted text-muted-foreground hover:bg-muted/80'
-                                    }
-                                  >
-                                    {label}
-                                  </Badge>
-                                )
-                              })()}
-                            {col.key === 'name' && (
-                              <span className='font-medium text-blue-600'>
-                                {zone.name}
-                              </span>
-                            )}
-                            {col.key === 'manager' && (
-                              <span className={zone.manager ? 'font-medium' : 'text-gray-500'}>
-                                {zone.manager || 'No manager assigned'}
-                              </span>
-                            )}
-                            {col.key === 'actions' && (
-                              <div className='flex gap-2' onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  variant='ghost'
-                                  size='sm'
-                                  onClick={() => handleEditZone(zone.id)}
-                                >
-                                  <IconEdit size={16} />
-                                </Button>
-                                <Button
-                                  variant='ghost'
-                                  size='sm'
-                                  onClick={() => handleDeleteZone(zone.id)}
-                                >
-                                  <IconTrash size={16} />
-                                </Button>
-                              </div>
-                            )}
-                            {!['zoneType', 'name', 'manager', 'actions'].includes(col.key) && (
-                              <>
-                                {col.key === 'location' && (zone.location || zone.description || '-')}
-                              </>
-                            )}
+
+                                case 'name':
+                                  return <span className='font-medium text-blue-600'>{zone.name}</span>
+
+                                case 'manager':
+                                  return (
+                                    <span className={zone.manager ? 'font-medium' : 'text-gray-500'}>
+                                      {zone.manager || 'No manager assigned'}
+                                    </span>
+                                  )
+
+                                case 'location':
+                                  return zone.location || zone.description || '-'
+
+                                case 'actions':
+                                  return (
+                                    <div className='flex gap-2' onClick={(e) => e.stopPropagation()}>
+                                      <Button variant='ghost' size='sm' onClick={() => handleEditZone(zone.id)}>
+                                        <IconEdit size={16} />
+                                      </Button>
+                                      <Button variant='ghost' size='sm' onClick={() => handleDeleteZone(zone.id)}>
+                                        <IconTrash size={16} />
+                                      </Button>
+                                    </div>
+                                  )
+
+                                default:
+                                  return null
+                              }
+                            })()}
                           </TableCell>
                         ))}
                       </TableRow>

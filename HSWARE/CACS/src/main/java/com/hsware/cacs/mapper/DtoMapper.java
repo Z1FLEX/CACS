@@ -234,13 +234,15 @@ public class DtoMapper {
         zone.setName(dto.getName());
         zone.setLocation(dto.getLocation());
 
-        if (dto.getZoneTypeId() != null) {
-            if (dto.getZoneTypeId() == 0) {
-                zone.setZoneType(null);
-            } else {
-                zoneTypeRepository.findById(dto.getZoneTypeId()).ifPresent(zone::setZoneType);
-            }
+        if (dto.getZoneTypeId() == null) {
+            throw new IllegalArgumentException("Zone type is required");
         }
+
+        zoneTypeRepository.findById(dto.getZoneTypeId())
+                .ifPresentOrElse(
+                        zone::setZoneType,
+                        () -> { throw new IllegalArgumentException("Invalid zone type ID"); }
+                );
 
         return zone;
     }

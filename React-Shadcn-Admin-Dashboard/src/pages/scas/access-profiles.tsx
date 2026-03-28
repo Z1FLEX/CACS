@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/custom/button'
-import { IconPlus } from '@tabler/icons-react'
-import { getProfiles, subscribeProfiles, loadProfiles, removeProfile } from '@/services'
+import { Badge } from '@/components/ui/badge'
+import { IconPlus, IconClock, IconMapPin } from '@tabler/icons-react'
+import { getProfiles, subscribeProfiles, loadProfiles, removeProfile, loadSchedules, loadZones, getSchedules, getZones } from '@/services'
 import AddProfileDialog from './components/add-profile-dialog'
+import type { Profile, Schedule, Zone } from '@/types/scas'
 
 export default function AccessProfilesPage() {
   const [profiles, setProfiles] = useState(() => getProfiles())
+  const [schedules, setSchedules] = useState(() => getSchedules())
+  const [zones, setZones] = useState(() => getZones())
   const [open, setOpen] = useState(false)
   const [current, setCurrent] = useState<any | null>(null)
 
@@ -14,6 +18,25 @@ export default function AccessProfilesPage() {
     const unsub = subscribeProfiles(setProfiles)
     loadProfiles().then(() => {})
     return unsub
+  }, [])
+
+  useEffect(() => {
+    // Load schedules and zones for display
+    const loadScheduleAndZoneData = async () => {
+      try {
+        await Promise.all([
+          loadSchedules(),
+          loadZones()
+        ])
+        // After loading, update state with fresh data
+        setSchedules(getSchedules())
+        setZones(getZones())
+      } catch (error) {
+        console.error('Failed to load schedules and zones:', error)
+      }
+    }
+    
+    loadScheduleAndZoneData()
   }, [])
 
   const handleEdit = (id: string) => {
@@ -28,6 +51,32 @@ export default function AccessProfilesPage() {
     if (confirm(`Delete profile ${id}?`)) {
       await removeProfile(id)
     }
+  }
+
+  const getScheduleName = (scheduleId?: string) => {
+    if (!scheduleId) return 'No schedule'
+    const schedule = schedules.find(s => s.id === scheduleId)
+    return schedule?.name || 'Unknown schedule'
+  }
+
+  const getZoneNames = (zoneIds?: string[]) => {
+    if (!zoneIds || zoneIds.length === 0) return ['No zones assigned']
+    return zoneIds.map(id => {
+      const zone = zones.find(z => z.id === id)
+      return zone?.name || 'Unknown zone'
+    })
+  }
+
+  const getZoneTypeColor = (zoneType: string) => {
+    const colors: Record<string, string> = {
+      'White': 'bg-gray-100 text-gray-800',
+      'Green': 'bg-green-100 text-green-800',
+      'Blue': 'bg-blue-100 text-blue-800',
+      'Orange': 'bg-orange-100 text-orange-800',
+      'Red': 'bg-red-100 text-red-800',
+      'Black': 'bg-black text-white',
+    }
+    return colors[zoneType] || 'bg-gray-100 text-gray-800'
   }
 
   return (
@@ -50,9 +99,43 @@ export default function AccessProfilesPage() {
               <CardTitle className='text-lg'>{profile.name}</CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
-              <p className='text-sm text-muted-foreground'>{profile.description}</p>
-              <div className='flex gap-2'>
-                <span className='text-sm'>Permissions: {profile.permissions}</span>
+              <div className='space-y-2'>
+                <div className='flex items-center gap-2 text-sm'>
+                  <IconClock size={14} />
+                  <span className='font-medium'>Schedule:</span>
+                  <span className='text-muted-foreground'>{getScheduleName(profile.scheduleId)}</span>
+                </div>
+                
+                <div className='flex items-start gap-2 text-sm'>
+                  <IconMapPin size={14} className='mt-0.5' />
+                  <div>
+                    <span className='font-medium'>Zones:</span>
+                    <div className='mt-1 space-y-1'>
+                      {getZoneNames(profile.zoneIds).slice(0, 3).map((zoneName, index) => {
+                        const zoneId = profile.zoneIds?.[index]
+                        const zone = zones.find(z => z.id === zoneId)
+                        return (
+                          <div key={index} className='flex items-center gap-1'>
+                            <span className='text-muted-foreground text-xs'>• {zoneName}</span>
+                            {zone?.zoneType && (
+                              <Badge className={`text-xs ${getZoneTypeColor(zone.zoneType.name || '')}`}>
+                                {zone.zoneType.name}
+                              </Badge>
+                            )}
+                          </div>
+                        )
+                      })}
+                      {profile.zoneIds && profile.zoneIds.length > 3 && (
+                        <span className='text-muted-foreground text-xs'>
+                          +{profile.zoneIds.length - 3} more zones
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className='flex gap-2 pt-2'>
                 <Button variant='outline' size='sm' onClick={() => handleEdit(profile.id)}>
                   Edit
                 </Button>

@@ -53,7 +53,44 @@ class Store<T extends { id: string }> {
 
 export const usersStore = new Store<User>([])
 export const accessCardsStore = new Store<AccessCard>([])
-export const zonesStore = new Store<Zone>([])
+// Mock zones for testing - remove later
+const mockZones: Zone[] = [
+  {
+    id: '1',
+    name: 'Server Room',
+    location: 'Building B - Basement',
+    description: 'High security area',
+    zoneTypeId: '4',
+    zoneType: { name: 'Red', level: 4 },
+    manager: 'John Doe',
+    status: 'active',
+    createdAt: '2024-01-01',
+  },
+  {
+    id: '2',
+    name: 'Main Entrance',
+    location: 'Building A - Floor 1',
+    description: 'Public access area',
+    zoneTypeId: '2',
+    zoneType: { name: 'Green', level: 2 },
+    manager: 'Jane Smith',
+    status: 'active',
+    createdAt: '2024-01-01',
+  },
+  {
+    id: '3',
+    name: 'Office Area',
+    location: 'Building A - Floor 2',
+    description: 'General office space',
+    zoneTypeId: '1',
+    zoneType: { name: 'Blue', level: 1 },
+    manager: 'Mike Johnson',
+    status: 'active',
+    createdAt: '2024-01-01',
+  }
+]
+
+export const zonesStore = new Store<Zone>(mockZones)
 export const doorsStore = new Store<Door>([])
 export const devicesStore = new Store<Device>([])
 export const profilesStore = new Store<Profile>([])

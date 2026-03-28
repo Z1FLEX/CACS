@@ -17,7 +17,12 @@ import {
 export type ProfileSubscriber = (profiles: Profile[]) => void
 
 function normalizeProfile(p: any): Profile {
-  return { ...p, id: String(p.id) }
+  return { 
+    ...p, 
+    id: String(p.id),
+    scheduleId: p.scheduleId ? String(p.scheduleId) : undefined,
+    zoneIds: p.zoneIds ? p.zoneIds.map((id: number) => String(id)) : [],
+  }
 }
 
 export async function loadProfiles(): Promise<void> {

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -9,12 +9,18 @@ import { addMinutes, format } from "date-fns"
 import { Button } from '@/components/custom/button'
 import { toast } from '@/components/ui/use-toast'
 import { CalendarEvent } from './data/schema'
+import { getCalendarEvents, setCalendarEvents, subscribeCalendarEvents } from '@/data/calendar-events-store'
 
 export default function SchedulesPage() {
   const calendarRef = useRef<FullCalendar>(null)
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>(() => getCalendarEvents());
   const [currentEvent, setCurrentEvent] = useState<CalendarEvent | null>(null)
   const [isEventModalOpen, setIsEventModalOpen] = useState<boolean>(false)
+
+  useEffect(() => {
+    const unsubscribe = subscribeCalendarEvents(setEvents)
+    return unsubscribe
+  }, [])
 
   const handleEventClick = (clickInfo: EventClickArg) => {
     const event = clickInfo.event
@@ -41,12 +47,14 @@ export default function SchedulesPage() {
   const handleSaveEvent = () => {
     if (!currentEvent) return
 
-    setEvents(prevEvents => {
-      const updatedEvents = currentEvent.id
-        ? prevEvents.map(e => e.id === currentEvent.id ? currentEvent : e)
-        : [...prevEvents, { ...currentEvent, id: Date.now().toString() }];
-      return updatedEvents;
-    });
+    const updatedEvent = currentEvent.id
+      ? currentEvent
+      : { ...currentEvent, id: Date.now().toString() }
+    
+    setCalendarEvents(currentEvent.id 
+      ? [...events].map(e => e.id === currentEvent.id ? currentEvent : e)
+      : [...events, updatedEvent]
+    )
 
     setIsEventModalOpen(false)
     setCurrentEvent(null)
@@ -57,10 +65,8 @@ export default function SchedulesPage() {
 
   const handleDeleteEvent = () => {
     if (currentEvent && currentEvent.id) {
-      setEvents(prevEvents => {
-        const updatedEvents = prevEvents.filter(e => e.id !== currentEvent.id);
-        return updatedEvents;
-      });
+      const updatedEvents = events.filter(e => e.id !== currentEvent.id)
+      setCalendarEvents(updatedEvents)
       setIsEventModalOpen(false)
       setCurrentEvent(null)
       toast({

@@ -15,9 +15,12 @@ import { Button } from '@/components/custom/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { IconArrowLeft, IconArrowRight, IconCheck, IconClock, IconMapPin } from '@tabler/icons-react'
-import type { Profile, Schedule, Zone } from '@/types/scas'
-import { addProfile, updateProfile, loadSchedules, loadZones, getSchedules, getZones } from '@/services'
+import { IconArrowLeft, IconArrowRight, IconCheck, IconClock, IconMapPin, IconSearch } from '@tabler/icons-react'
+import type { Profile, Zone } from '@/types/scas'
+import type { CalendarEvent } from '@/pages/scas/data/schema'
+import { addProfile, updateProfile, loadZones, getZones } from '@/services'
+import { subscribeCalendarEvents } from '@/data/calendar-events-store'
+import { format } from 'date-fns'
 
 const step1Schema = z.object({
   name: z.string().min(1, 'Profile name is required'),
@@ -41,9 +44,10 @@ type Step = 1 | 2 | 3
 
 export default function AddProfileDialog({ open, onOpenChange, current }: Props) {
   const [currentStep, setCurrentStep] = useState<Step>(1)
-  const [schedules, setSchedules] = useState<Schedule[]>([])
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
   const [zones, setZones] = useState<Zone[]>([])
   const [selectedZoneIds, setSelectedZoneIds] = useState<string[]>([])
+  const [scheduleSearchTerm, setScheduleSearchTerm] = useState<string>('')
   const [profileData, setProfileData] = useState<Step1FormValues & Step2FormValues>({
     name: '',
     scheduleId: '',
@@ -62,21 +66,20 @@ export default function AddProfileDialog({ open, onOpenChange, current }: Props)
 
   useEffect(() => {
     if (open) {
-      // Load schedules and zones
+      // Load calendar events and zones
       const loadData = async () => {
         try {
-          await Promise.all([
-            loadSchedules(),
-            loadZones()
-          ])
-          setSchedules(getSchedules())
+          await loadZones()
           setZones(getZones())
         } catch (error) {
-          console.error('Failed to load schedules and zones:', error)
+          console.error('Failed to load zones:', error)
         }
       }
       
       loadData()
+      
+      // Subscribe to calendar events
+      const unsubscribe = subscribeCalendarEvents(setCalendarEvents)
       
       if (current) {
         const initialData = {
@@ -96,6 +99,8 @@ export default function AddProfileDialog({ open, onOpenChange, current }: Props)
         step2Form.setValue('zoneIds', [])
         setCurrentStep(1)
       }
+      
+      return unsubscribe
     }
   }, [open, current])
 
@@ -203,17 +208,62 @@ export default function AddProfileDialog({ open, onOpenChange, current }: Props)
             <FormItem>
               <FormLabel>Schedule (Optional)</FormLabel>
               <FormControl>
-                <select 
-                  {...field} 
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Select a schedule...</option>
-                  {schedules.map((schedule) => (
-                    <option key={schedule.id} value={schedule.id}>
-                      {schedule.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-2">
+                  <div className="relative">
+                    <IconSearch className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search schedules..."
+                      value={scheduleSearchTerm}
+                      onChange={(e) => setScheduleSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <div className="border border-gray-300 rounded-md max-h-40 overflow-y-auto">
+                    {calendarEvents
+                      .filter(event => 
+                        event.title.toLowerCase().includes(scheduleSearchTerm.toLowerCase())
+                      )
+                      .map((event) => (
+                        <div
+                          key={event.id}
+                          className={`p-3 cursor-pointer hover:bg-gray-100 border-b last:border-b-0 ${
+                            field.value === event.id ? 'bg-blue-50 border-blue-200' : ''
+                          }`}
+                          onClick={() => {
+                            field.onChange(event.id)
+                            setScheduleSearchTerm('')
+                          }}
+                        >
+                          <div className="font-medium">{event.title}</div>
+                          <div className="text-sm text-gray-500">
+                            {event.start && event.end && (
+                              <>
+                                {format(new Date(event.start), 'HH:mm')} - {format(new Date(event.end), 'HH:mm')}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    {calendarEvents.length === 0 && (
+                      <div className="p-3 text-gray-500 text-center">
+                        No schedules available. Create events in the Schedules page first.
+                      </div>
+                    )}
+                    {calendarEvents.length > 0 && 
+                      calendarEvents.filter(event => 
+                        event.title.toLowerCase().includes(scheduleSearchTerm.toLowerCase())
+                      ).length === 0 && (
+                      <div className="p-3 text-gray-500 text-center">
+                        No schedules found matching "{scheduleSearchTerm}"
+                      </div>
+                    )}
+                  </div>
+                  {field.value && (
+                    <div className="text-sm text-blue-600">
+                      Selected: {calendarEvents.find(e => e.id === field.value)?.title}
+                    </div>
+                  )}
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -332,7 +382,7 @@ export default function AddProfileDialog({ open, onOpenChange, current }: Props)
   }
 
   const renderStep3 = () => {
-    const selectedSchedule = schedules.find(s => s.id === profileData.scheduleId)
+    const selectedSchedule = calendarEvents.find(e => e.id === profileData.scheduleId)
     const selectedZones = zones.filter(zone => selectedZoneIds.includes(zone.id))
 
     return (
@@ -355,7 +405,14 @@ export default function AddProfileDialog({ open, onOpenChange, current }: Props)
               {selectedSchedule ? (
                 <div className="flex items-center gap-2 text-sm">
                   <IconClock size={16} />
-                  <span>{selectedSchedule.name}</span>
+                  <div>
+                    <div className="font-medium">{selectedSchedule.title}</div>
+                    {selectedSchedule.start && selectedSchedule.end && (
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(selectedSchedule.start), 'HH:mm')} - {format(new Date(selectedSchedule.end), 'HH:mm')}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No schedule assigned</p>

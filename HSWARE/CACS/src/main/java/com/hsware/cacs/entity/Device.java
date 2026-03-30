@@ -24,8 +24,9 @@ public class Device {
     @Column(name = "model_name", length = 100)
     private String modelName;
 
-    @Column(name = "type")
-    private Integer type;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", length = 20)
+    private DeviceType type;
 
     @Column(name = "status", nullable = false, length = 20)
     private String status; // ONLINE, OFFLINE

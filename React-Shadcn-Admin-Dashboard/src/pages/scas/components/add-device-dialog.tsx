@@ -16,17 +16,7 @@ import { Button } from '@/components/custom/button'
 import { SelectDropdown } from '@/components/select-dropdown'
 import { addDevice, updateDevice } from '@/services'
 
-function mapType(type: string): number {
-  switch (type) {
-    case 'reader': return 1
-    case 'controller': return 2
-    case 'lock': return 3
-    default: return 0
-  }
-}
-
 const schema = z.object({
-  name: z.string().min(1),
   type: z.enum(['reader', 'controller', 'lock']),
   serialNumber: z.string().min(1),
   modelName: z.string().min(1),
@@ -35,20 +25,16 @@ const schema = z.object({
 })
 type FormValues = z.infer<typeof schema>
 
-interface Props {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  current?: any | null
-}
-
 export default function AddDeviceDialog({ open, onOpenChange, current }: Props) {
-  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { type: 'reader', port: 8080 } })
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { type: 'reader', port: 8080 },
+  })
 
   useEffect(() => {
     if (current) {
-      form.reset({ 
-        name: current.name, 
-        type: current.type, 
+      form.reset({
+        type: (current.type || 'READER').toLowerCase(),
         serialNumber: current.serialNumber,
         modelName: current.modelName,
         ip: current.ip,
@@ -56,43 +42,39 @@ export default function AddDeviceDialog({ open, onOpenChange, current }: Props) 
       })
     }
   }, [current, form])
+
   const onSubmit = async (vals: FormValues) => {
-  try {
-    if (current) {
-      // ✅ UPDATE
-      const updated = {
-        ...current,
-        serialNumber: vals.serialNumber,
-        modelName: vals.modelName,
-        type: mapType(vals.type),
-        ip: vals.ip,
-        port: vals.port,
+    try {
+      if (current) {
+        const updated = {
+          ...current,
+          type: vals.type.toUpperCase(), // ✅ ALWAYS uppercase
+          serialNumber: vals.serialNumber,
+          modelName: vals.modelName,
+          ip: vals.ip,
+          port: vals.port,
+        }
+
+        await updateDevice(updated)
+      } else {
+        const newDevice = {
+          type: vals.type.toUpperCase(), // ✅ matches backend enum
+          serialNumber: vals.serialNumber,
+          modelName: vals.modelName,
+          status: 'ONLINE',
+          ip: vals.ip,
+          port: vals.port,
+        }
+
+        await addDevice(newDevice as any)
       }
 
-      await updateDevice(updated)
-
-    } else {
-      // ✅ CREATE (clean payload for backend)
-      const newDevice = {
-        serialNumber: vals.serialNumber,
-        modelName: vals.modelName,
-        type: mapType(vals.type),
-        status: 'ONLINE',
-        ip: vals.ip,
-        port: vals.port,
-      }
-
-      await addDevice(newDevice as any)
+      form.reset()
+      onOpenChange(false)
+    } catch (err) {
+      console.error('Failed to save device:', err)
     }
-
-    form.reset()
-    onOpenChange(false)
-
-  } catch (err) {
-    console.error('Failed to save device:', err)
   }
-}  
-
 
   return (
     <Dialog open={open} onOpenChange={(s) => { form.reset(); onOpenChange(s) }}>
@@ -161,7 +143,7 @@ export default function AddDeviceDialog({ open, onOpenChange, current }: Props) 
                 </FormControl>
                 <FormMessage />
               </FormItem>
-            )} /> CLEAN V
+            )} />
           </form>
         </Form>
         <DialogFooter>

@@ -14,7 +14,7 @@ public class DeviceDTO extends BaseDTO {
 
     private String serialNumber;
     private String modelName;
-    private Integer type;
+    private String type;
     private String status;
     private String ip;
     private Integer port;

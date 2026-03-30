@@ -20,7 +20,8 @@ function normalizeDevice(d: any): Device {
   return {
     ...d,
     id: String(d.id),
-    doorId: String(d.doorId ?? ''),
+    doorIds: (d.doorIds || []).map(String),
+    doorNames: d.doorNames || [],
     name: d.name ?? d.serialNumber ?? '',
     status: (d.status || 'ONLINE').toUpperCase(),
   }

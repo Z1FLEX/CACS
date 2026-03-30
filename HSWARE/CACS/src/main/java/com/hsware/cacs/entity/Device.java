@@ -39,13 +39,25 @@ public class Device {
     @Column(name = "last_seen_at")
     private Instant lastSeenAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "door_id", nullable = false)
-    private Door door;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "device_door",
+            joinColumns = @JoinColumn(name = "device_id"),
+            inverseJoinColumns = @JoinColumn(name = "door_id")
+    )
+    private Set<Door> doors = new HashSet<>();
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
     @Column(name = "created_at")
     private Instant createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = Instant.now();
+        if (this.status == null) {
+            this.status = "OFFLINE";
+        }
+    }
 }

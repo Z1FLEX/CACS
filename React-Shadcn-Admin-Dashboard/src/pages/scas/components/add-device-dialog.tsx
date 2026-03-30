@@ -16,6 +16,15 @@ import { Button } from '@/components/custom/button'
 import { SelectDropdown } from '@/components/select-dropdown'
 import { addDevice, updateDevice } from '@/services'
 
+function mapType(type: string): number {
+  switch (type) {
+    case 'reader': return 1
+    case 'controller': return 2
+    case 'lock': return 3
+    default: return 0
+  }
+}
+
 const schema = z.object({
   name: z.string().min(1),
   type: z.enum(['reader', 'controller', 'lock']),
@@ -47,40 +56,43 @@ export default function AddDeviceDialog({ open, onOpenChange, current }: Props) 
       })
     }
   }, [current, form])
-
   const onSubmit = async (vals: FormValues) => {
+  try {
     if (current) {
+      // ✅ UPDATE
       const updated = {
         ...current,
-        name: vals.name,
-        type: vals.type,
         serialNumber: vals.serialNumber,
         modelName: vals.modelName,
+        type: mapType(vals.type),
         ip: vals.ip,
         port: vals.port,
       }
+
       await updateDevice(updated)
+
     } else {
-      const id = String(Date.now())
+      // ✅ CREATE (clean payload for backend)
       const newDevice = {
-        id,
-        name: vals.name,
-        type: vals.type,
         serialNumber: vals.serialNumber,
         modelName: vals.modelName,
+        type: mapType(vals.type),
+        status: 'ONLINE',
         ip: vals.ip,
         port: vals.port,
-        status: 'offline',
-        lastActivity: new Date().toISOString(),
-        doorIds: [],
-        doorNames: [],
       }
+
       await addDevice(newDevice as any)
     }
 
     form.reset()
     onOpenChange(false)
+
+  } catch (err) {
+    console.error('Failed to save device:', err)
   }
+}  
+
 
   return (
     <Dialog open={open} onOpenChange={(s) => { form.reset(); onOpenChange(s) }}>
@@ -149,7 +161,7 @@ export default function AddDeviceDialog({ open, onOpenChange, current }: Props) 
                 </FormControl>
                 <FormMessage />
               </FormItem>
-            )} />
+            )} /> CLEAN V
           </form>
         </Form>
         <DialogFooter>

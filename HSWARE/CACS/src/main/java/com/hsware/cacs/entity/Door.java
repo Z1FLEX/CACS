@@ -30,4 +30,7 @@ public class Door {
 
     @Column(name = "created_at")
     private Instant createdAt;
+
+    @ManyToMany(mappedBy = "doors", fetch = FetchType.LAZY)
+    private Set<Device> devices = new HashSet<>();
 }

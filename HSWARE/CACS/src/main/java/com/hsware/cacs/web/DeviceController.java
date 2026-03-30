@@ -32,7 +32,7 @@ public class DeviceController {
     }
 
     @PostMapping
-    public ResponseEntity<DeviceDTO> create(@RequestBody DeviceCreateDTO body) {
+    public ResponseEntity<DeviceDTO> create(@Valid @RequestBody DeviceCreateDTO body) {
         DeviceDTO created = deviceService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }

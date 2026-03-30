@@ -275,53 +275,62 @@ public class DtoMapper {
 
     public DeviceDTO toDeviceDTO(Device device) {
         if (device == null) return null;
-        
-        Door door = device.getDoor();
+
+        List<Integer> doorIds = device.getDoors().stream()
+                .map(Door::getId)
+                .toList();
+
+        List<String> doorNames = device.getDoors().stream()
+                .map(d -> nullToEmpty(d.getName()))
+                .toList();
+
         return new DeviceDTO(
-            device.getId(),
-            nullToEmpty(device.getSerialNumber()),
-            nullToEmpty(device.getModelName()),
-            device.getType(),
-            nullToEmpty(device.getStatus()),
-            nullToEmpty(device.getIp()),
-            device.getPort(),
-            device.getLastSeenAt(),
-            door != null ? door.getId() : null,
-            door != null ? nullToEmpty(door.getName()) : "",
-            device.getCreatedAt()
+                device.getId(),
+                nullToEmpty(device.getSerialNumber()),
+                nullToEmpty(device.getModelName()),
+                device.getType(),
+                nullToEmpty(device.getStatus()),
+                nullToEmpty(device.getIp()),
+                device.getPort(),
+                device.getLastSeenAt(),
+                doorIds,
+                doorNames,
+                device.getCreatedAt()
         );
     }
 
     public Device toDevice(DeviceCreateDTO dto) {
         if (dto == null) return null;
-        
+
         Device device = new Device();
         device.setSerialNumber(dto.getSerialNumber());
         device.setModelName(dto.getModelName());
         device.setType(dto.getType());
-        device.setStatus(dto.getStatus() != null ? dto.getStatus().toUpperCase() : "ONLINE");
+        device.setStatus(dto.getStatus() != null ? dto.getStatus().toUpperCase() : "OFFLINE");
         device.setIp(dto.getIp());
         device.setPort(dto.getPort());
-        
-        if (dto.getDoorId() != null) {
-            doorRepository.findById(dto.getDoorId()).ifPresent(device::setDoor);
+
+        if (dto.getDoorIds() != null && !dto.getDoorIds().isEmpty()) {
+            List<Door> doors = doorRepository.findAllById(dto.getDoorIds());
+            device.setDoors(new HashSet<>(doors));
         }
-        
+
         return device;
     }
 
     public void updateDeviceFromDTO(DeviceUpdateDTO dto, Device device) {
         if (dto == null || device == null) return;
-        
+
         if (dto.getSerialNumber() != null) device.setSerialNumber(dto.getSerialNumber());
         if (dto.getModelName() != null) device.setModelName(dto.getModelName());
         if (dto.getType() != null) device.setType(dto.getType());
         if (dto.getStatus() != null) device.setStatus(dto.getStatus().toUpperCase());
         if (dto.getIp() != null) device.setIp(dto.getIp());
         if (dto.getPort() != null) device.setPort(dto.getPort());
-        
-        if (dto.getDoorId() != null) {
-            doorRepository.findById(dto.getDoorId()).ifPresent(device::setDoor);
+
+        if (dto.getDoorIds() != null) {
+            List<Door> doors = doorRepository.findAllById(dto.getDoorIds());
+            device.setDoors(new HashSet<>(doors));
         }
     }
 

@@ -34,8 +34,8 @@ public class DeviceService {
     }
 
     @Transactional
-    public DeviceDTO create(DeviceCreateDTO deviceCreateDTO) {
-        Device device = dtoMapper.toDevice(deviceCreateDTO);
+    public DeviceDTO create(DeviceCreateDTO dto) {
+        Device device = dtoMapper.toDevice(dto);
         device = deviceRepository.save(device);
         return dtoMapper.toDeviceDTO(device);
     }

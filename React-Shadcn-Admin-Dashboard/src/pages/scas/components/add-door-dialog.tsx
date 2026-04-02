@@ -57,7 +57,7 @@ export default function AddDoorDialog({ open, onOpenChange, current }: Props) {
       const updated = {
         ...current,
         name: vals.name,
-        zoneId: vals.zoneId,
+        zoneId: parseInt(vals.zoneId),
         zoneName: zones.find(z => z.id === vals.zoneId)?.name || current.zoneName,
         location: vals.location || current.location,
       }
@@ -68,7 +68,7 @@ export default function AddDoorDialog({ open, onOpenChange, current }: Props) {
       const newDoor = {
         id,
         name: vals.name,
-        zoneId: vals.zoneId,
+        zoneId: parseInt(vals.zoneId),
         zoneName: zone ? zone.name : 'Unknown',
         location: vals.location || '',
       }

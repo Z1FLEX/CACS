@@ -31,7 +31,14 @@ interface Props {
 }
 
 export default function AddDoorDialog({ open, onOpenChange, current }: Props) {
-  const form = useForm<FormValues>({ resolver: zodResolver(schema) })
+  const form = useForm<FormValues>({ 
+    resolver: zodResolver(schema),
+    defaultValues: {
+      name: '',
+      zoneId: '',
+      location: ''
+    }
+  })
   const [zones, setZones] = useState<Zone[]>(() => getZones())
 
   useEffect(() => {
@@ -68,12 +75,23 @@ export default function AddDoorDialog({ open, onOpenChange, current }: Props) {
       await addDoor(newDoor as any)
     }
 
-    form.reset()
+    form.reset({
+      name: '',
+      zoneId: '',
+      location: ''
+    })
     onOpenChange(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={(s) => { form.reset(); onOpenChange(s) }}>
+    <Dialog open={open} onOpenChange={(s) => { 
+      form.reset({
+        name: '',
+        zoneId: '',
+        location: ''
+      }); 
+      onOpenChange(s) 
+    }}>
       <DialogContent className='sm:max-w-md'>
         <DialogHeader>
           <DialogTitle>{current ? 'Edit Door' : 'Add Door'}</DialogTitle>

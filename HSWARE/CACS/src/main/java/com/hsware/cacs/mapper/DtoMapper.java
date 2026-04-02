@@ -353,6 +353,7 @@ public class DtoMapper {
             nullToEmpty(door.getName()),
             zone != null ? zone.getId() : null,
             zone != null ? nullToEmpty(zone.getName()) : "",
+            nullToEmpty(door.getLocation()),
             door.getCreatedAt()
         );
     }
@@ -362,6 +363,7 @@ public class DtoMapper {
         
         Door door = new Door();
         door.setName(dto.getName());
+        door.setLocation(dto.getLocation());
         
         if (dto.getZoneId() != null) {
             zoneRepository.findById(dto.getZoneId()).ifPresent(door::setZone);
@@ -374,6 +376,7 @@ public class DtoMapper {
         if (dto == null || door == null) return;
         
         if (dto.getName() != null) door.setName(dto.getName());
+        if (dto.getLocation() != null) door.setLocation(dto.getLocation());
         
         if (dto.getZoneId() != null) {
             zoneRepository.findById(dto.getZoneId()).ifPresent(door::setZone);

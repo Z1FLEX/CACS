@@ -8,4 +8,5 @@ import lombok.NoArgsConstructor;
 public class DoorCreateDTO {
     private String name;
     private Integer zoneId;
+    private String location;
 }

@@ -28,6 +28,9 @@ public class Door {
     @JoinColumn(name = "zone_id", nullable = false)
     private Zone zone;
 
+    @Column(name = "location", length = 255)
+    private String location;
+
     @Column(name = "deleted_at")
     private Instant deletedAt;
 

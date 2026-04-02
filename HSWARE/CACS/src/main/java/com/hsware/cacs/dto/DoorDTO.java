@@ -15,12 +15,14 @@ public class DoorDTO extends BaseDTO {
     private String name;
     private Integer zoneId;
     private String zoneName;
+    private String location;
     
-    public DoorDTO(Integer id, String name, Integer zoneId, String zoneName, Instant createdAt) {
+    public DoorDTO(Integer id, String name, Integer zoneId, String zoneName, String location, Instant createdAt) {
         this.id = id;
         this.name = name;
         this.zoneId = zoneId;
         this.zoneName = zoneName;
+        this.location = location;
         this.createdAt = createdAt;
     }
 }

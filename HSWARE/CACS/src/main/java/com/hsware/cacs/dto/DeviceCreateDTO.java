@@ -2,6 +2,15 @@ package com.hsware.cacs.dto;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -16,17 +25,16 @@ public class DeviceCreateDTO {
     private String modelName;
 
     @NotNull
-    private Integer type;
+    private DeviceType type;        // Was Integer — wrong. Jackson calls fromString() automatically
 
-    @Pattern(regexp = "ONLINE|OFFLINE")
-    private String status;
+    @Pattern(regexp = "ONLINE|OFFLINE", message = "Status must be ONLINE or OFFLINE")
+    private String status;          // Optional at creation — defaults to OFFLINE in mapper
 
     @Size(max = 45)
     private String ip;
 
-    @Min(1)
-    @Max(65535)
+    @Min(1) @Max(65535)
     private Integer port;
 
-    private List<Integer> doorIds;
+    public List<Integer> doorIds;
 }

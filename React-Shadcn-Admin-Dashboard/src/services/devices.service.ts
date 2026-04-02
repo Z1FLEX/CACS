@@ -1,7 +1,10 @@
 /**
  * Devices service – all device CRUD and subscriptions. UI must use this instead of store/mock.
  */
+// devices.service.ts
+
 import type { Device } from '@/types/scas'
+import type { DeviceCreateDTO, DeviceUpdateDTO, DeviceType } from '@/types/device'
 import {
   getDevices as storeGetDevices,
   subscribeDevices as storeSubscribeDevices,
@@ -16,15 +19,24 @@ import {
 
 export type DeviceSubscriber = (devices: Device[]) => void
 
-function normalizeDevice(d: any): Device {
+const VALID_TYPES = new Set(['READER', 'CONTROLLER', 'LOCK'])
+const VALID_STATUSES = new Set(['ONLINE', 'OFFLINE'])
+
+function normalizeDevice(d: unknown): Device {
+  const raw = d as Record<string, unknown>
+
+  const rawType = String(raw.type ?? '').toUpperCase()
+  const rawStatus = String(raw.status ?? '').toUpperCase()
+
   return {
-    ...d,
-    id: String(d.id),
-    doorIds: (d.doorIds || []).map(String),
-    doorNames: d.doorNames || [],
-    name: d.name ?? d.serialNumber ?? '',
-    status: (d.status || 'ONLINE').toUpperCase(),
-  }
+    ...raw,
+    id:        String(raw.id),
+    doorIds:   ((raw.doorIds as number[]) || []).map(String),
+    doorNames: (raw.doorNames as string[]) || [],
+    name:      (raw.name as string) ?? (raw.serialNumber as string) ?? '',
+    type:      VALID_TYPES.has(rawType)   ? rawType   : 'READER',   // safe fallback + log
+    status:    VALID_STATUSES.has(rawStatus) ? rawStatus : 'OFFLINE',
+  } as Device
 }
 
 export async function loadDevices(): Promise<void> {
@@ -40,13 +52,15 @@ export function subscribeDevices(cb: DeviceSubscriber): () => void {
   return storeSubscribeDevices(cb)
 }
 
-export async function addDevice(device: Device): Promise<void> {
-  await apiCreateDevice(device)
+// Accept the create shape — NOT the full Device type
+export async function addDevice(payload: DeviceCreateDTO): Promise<void> {
+  await apiCreateDevice(payload)
   await loadDevices()
 }
 
-export async function updateDevice(device: Device): Promise<void> {
-  await apiUpdateDevice(device.id, device)
+// Accept id + update shape separately — matches apiUpdateDevice(id, dto) signature
+export async function updateDevice(id: string, payload: DeviceUpdateDTO): Promise<void> {
+  await apiUpdateDevice(id, payload)
   await loadDevices()
 }
 

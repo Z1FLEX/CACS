@@ -16,8 +16,14 @@ import {
 
 export type DoorSubscriber = (doors: Door[]) => void
 
-function normalizeDoor(d: any): Door {
-  return { ...d, id: String(d.id), zoneId: String(d.zoneId ?? '') }
+function normalizeDoor(d: unknown): Door {
+  const door = d as Record<string, unknown>;
+  return { 
+    ...door, 
+    id: String(door.id), 
+    zoneId: String(door.zoneId ?? ''),
+    name: String(door.name ?? '')
+  }
 }
 
 export async function loadDoors(): Promise<void> {

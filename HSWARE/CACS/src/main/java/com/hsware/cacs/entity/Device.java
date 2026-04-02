@@ -1,9 +1,13 @@
 package com.hsware.cacs.entity;
 
+import com.hsware.cacs.dto.DeviceType;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "device")
@@ -46,6 +50,7 @@ public class Device {
             joinColumns = @JoinColumn(name = "device_id"),
             inverseJoinColumns = @JoinColumn(name = "door_id")
     )
+    @JsonManagedReference("device-doors")
     private Set<Door> doors = new HashSet<>();
 
     @Column(name = "deleted_at")

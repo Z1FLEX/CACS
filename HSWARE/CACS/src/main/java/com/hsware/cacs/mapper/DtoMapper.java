@@ -12,8 +12,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -276,27 +278,31 @@ public class DtoMapper {
     public DeviceDTO toDeviceDTO(Device device) {
         if (device == null) return null;
 
-        List<Integer> doorIds = device.getDoors().stream()
+        List<Door> sortedDoors = device.getDoors().stream()
+                .sorted((d1, d2) -> Integer.compare(d1.getId(), d2.getId()))
+                .toList();
+
+        List<Integer> doorIds = sortedDoors.stream()
                 .map(Door::getId)
                 .toList();
 
-        List<String> doorNames = device.getDoors().stream()
+        List<String> doorNames = sortedDoors.stream()
                 .map(d -> nullToEmpty(d.getName()))
                 .toList();
 
-        return new DeviceDTO(
-                device.getId(),
-                nullToEmpty(device.getSerialNumber()),
-                nullToEmpty(device.getModelName()),
-                device.getType(),
-                nullToEmpty(device.getStatus()),
-                nullToEmpty(device.getIp()),
-                device.getPort(),
-                device.getLastSeenAt(),
-                doorIds,
-                doorNames,
-                device.getCreatedAt()
-        );
+        DeviceDTO deviceDTO = new DeviceDTO();
+        deviceDTO.setId(device.getId());
+        deviceDTO.setCreatedAt(device.getCreatedAt());
+        deviceDTO.setSerialNumber(nullToEmpty(device.getSerialNumber()));
+        deviceDTO.setModelName(nullToEmpty(device.getModelName()));
+        deviceDTO.setType(device.getType() != null ? device.getType().name() : null);
+        deviceDTO.setStatus(nullToEmpty(device.getStatus()));
+        deviceDTO.setIp(nullToEmpty(device.getIp()));
+        deviceDTO.setPort(device.getPort());
+        deviceDTO.setLastSeenAt(device.getLastSeenAt());
+        deviceDTO.setDoorIds(doorIds);
+        deviceDTO.setDoorNames(doorNames);
+        return deviceDTO;
     }
 
     public Device toDevice(DeviceCreateDTO dto) {
@@ -306,7 +312,7 @@ public class DtoMapper {
         device.setSerialNumber(dto.getSerialNumber());
         device.setModelName(dto.getModelName());
         device.setType(dto.getType());
-        device.setStatus(dto.getStatus() != null ? dto.getStatus().toUpperCase() : "OFFLINE");
+        device.setStatus("OFFLINE");
         device.setIp(dto.getIp());
         device.setPort(dto.getPort());
 
@@ -321,16 +327,20 @@ public class DtoMapper {
     public void updateDeviceFromDTO(DeviceUpdateDTO dto, Device device) {
         if (dto == null || device == null) return;
 
-        if (dto.getSerialNumber() != null) device.setSerialNumber(dto.getSerialNumber());
-        if (dto.getModelName() != null) device.setModelName(dto.getModelName());
-        if (dto.getType() != null) device.setType(dto.getType());
-        if (dto.getStatus() != null) device.setStatus(dto.getStatus().toUpperCase());
-        if (dto.getIp() != null) device.setIp(dto.getIp());
-        if (dto.getPort() != null) device.setPort(dto.getPort());
+        Optional.ofNullable(dto.getSerialNumber()).ifPresent(device::setSerialNumber);
+        Optional.ofNullable(dto.getModelName()).ifPresent(device::setModelName);
+        Optional.ofNullable(dto.getType()).ifPresent(device::setType);
+        Optional.ofNullable(dto.getStatus()).ifPresent(status -> device.setStatus(status.toUpperCase()));
+        Optional.ofNullable(dto.getIp()).ifPresent(device::setIp);
+        Optional.ofNullable(dto.getPort()).ifPresent(device::setPort);
 
         if (dto.getDoorIds() != null) {
-            List<Door> doors = doorRepository.findAllById(dto.getDoorIds());
-            device.setDoors(new HashSet<>(doors));
+            if (dto.getDoorIds().isEmpty()) {
+                device.setDoors(new HashSet<>());
+            } else {
+                List<Door> doors = doorRepository.findAllById(dto.getDoorIds());
+                device.setDoors(new HashSet<>(doors));
+            }
         }
     }
 

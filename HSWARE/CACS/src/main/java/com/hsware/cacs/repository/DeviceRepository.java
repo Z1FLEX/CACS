@@ -12,5 +12,5 @@ public interface DeviceRepository extends JpaRepository<Device, Integer> {
 
     Optional<Device> findByIdAndDeletedAtIsNull(Integer id);
 
-    List<Device> findByDoor_IdAndDeletedAtIsNull(Integer doorId);
+    List<Device> findByDoors_IdAndDeletedAtIsNull(Integer doorId);
 }

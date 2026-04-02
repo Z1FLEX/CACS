@@ -2,6 +2,9 @@ package com.hsware.cacs.dto;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -10,7 +13,7 @@ public class DeviceUpdateDTO {
 
     private String serialNumber;
     private String modelName;
-    private Integer type;
+    private DeviceType type;
     private String status;
     private String ip;
     private Integer port;

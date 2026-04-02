@@ -1,9 +1,12 @@
 package com.hsware.cacs.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "door")
@@ -32,5 +35,6 @@ public class Door {
     private Instant createdAt;
 
     @ManyToMany(mappedBy = "doors", fetch = FetchType.LAZY)
+    @JsonBackReference("device-doors")
     private Set<Device> devices = new HashSet<>();
 }

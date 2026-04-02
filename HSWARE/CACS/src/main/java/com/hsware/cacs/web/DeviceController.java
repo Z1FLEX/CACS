@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
+import jakarta.persistence.EntityNotFoundException;
 
 import java.util.List;
 
@@ -38,10 +40,13 @@ public class DeviceController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<DeviceDTO> update(@PathVariable Integer id, @RequestBody DeviceUpdateDTO body) {
-        return deviceService.update(id, body)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<DeviceDTO> update(@PathVariable Integer id, @Valid @RequestBody DeviceUpdateDTO body) {
+        try {
+            DeviceDTO updated = deviceService.update(id, body);
+            return ResponseEntity.ok(updated);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @DeleteMapping("/{id}")

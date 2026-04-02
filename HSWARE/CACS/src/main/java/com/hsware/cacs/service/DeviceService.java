@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -34,21 +35,18 @@ public class DeviceService {
     }
 
     @Transactional
-    public DeviceDTO create(DeviceCreateDTO dto) {
-        Device device = dtoMapper.toDevice(dto);
-        device = deviceRepository.save(device);
-        return dtoMapper.toDeviceDTO(device);
-    }
+public DeviceDTO create(DeviceCreateDTO dto) {
+    Device device = dtoMapper.toDevice(dto);
+    return dtoMapper.toDeviceDTO(deviceRepository.save(device));
+}
 
     @Transactional
-    public Optional<DeviceDTO> update(Integer id, DeviceUpdateDTO deviceUpdateDTO) {
-        Optional<Device> existing = deviceRepository.findByIdAndDeletedAtIsNull(id);
-        if (existing.isEmpty()) return Optional.empty();
-        Device device = existing.get();
-        dtoMapper.updateDeviceFromDTO(deviceUpdateDTO, device);
-        device = deviceRepository.save(device);
-        return Optional.of(dtoMapper.toDeviceDTO(device));
-    }
+public DeviceDTO update(Integer id, DeviceUpdateDTO dto) {
+    Device device = deviceRepository.findByIdAndDeletedAtIsNull(id)
+            .orElseThrow(() -> new EntityNotFoundException("Device not found: " + id));
+    dtoMapper.updateDeviceFromDTO(dto, device);
+    return dtoMapper.toDeviceDTO(deviceRepository.save(device));
+}
 
     @Transactional
     public boolean delete(Integer id) {

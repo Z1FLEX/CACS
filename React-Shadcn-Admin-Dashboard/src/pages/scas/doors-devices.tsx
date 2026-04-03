@@ -12,6 +12,7 @@ import AddDoorDialog from './components/add-door-dialog'
 import DoorZoneAssignModal from './components/door-zone-assign-modal'
 import AddDeviceDialog from './components/add-device-dialog'
 import DeviceAssignmentDialog from './components/device-assignment-dialog'
+import DoorCell from '@/components/door-cell'
 import CSVImportDialog from '@/components/custom/csv-import-dialog'
 import { IconPlus, IconEdit, IconTrash, IconUpload, IconLink } from '@tabler/icons-react'
 
@@ -349,19 +350,7 @@ export default function DoorsDevicesPage() {
                                 {!['status', 'name', 'actions'].includes(col.key) && (
                                   <>
                                     {col.key === 'type' && device.type}
-                                    {col.key === 'doorNames' && (
-                                      <div className='space-y-1'>
-                                        {device.doorNames && device.doorNames.length > 0 ? (
-                                          device.doorNames.map((doorName: string, index: number) => (
-                                            <span key={index} className='inline-block bg-gray-100 rounded px-2 py-1 text-xs mr-1'>
-                                              {doorName}
-                                            </span>
-                                          ))
-                                        ) : (
-                                          <span className='text-gray-500'>No doors linked</span>
-                                        )}
-                                      </div>
-                                    )}
+                                    {col.key === 'doorNames' && <DoorCell doorNames={device.doorNames || []} />}
                                   </>
                                 )}
                               </TableCell>

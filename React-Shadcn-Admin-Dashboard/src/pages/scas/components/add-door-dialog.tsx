@@ -28,9 +28,10 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   current?: any | null
+  onSuccess?: () => Promise<void> | void
 }
 
-export default function AddDoorDialog({ open, onOpenChange, current }: Props) {
+export default function AddDoorDialog({ open, onOpenChange, current, onSuccess }: Props) {
   const form = useForm<FormValues>({ 
     resolver: zodResolver(schema),
     defaultValues: {
@@ -80,6 +81,7 @@ export default function AddDoorDialog({ open, onOpenChange, current }: Props) {
       zoneId: '',
       location: ''
     })
+    if (onSuccess) await onSuccess()
     onOpenChange(false)
   }
 

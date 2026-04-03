@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-wrapper'
 import type { Door, Device } from '@/types/scas'
-import { subscribeDoors, getDoors, loadDoors, removeDoor, subscribeDevices, getDevices, loadDevices, removeDevice, addDoor, addDevice } from '@/services'
+import { DeviceType, type DeviceCreateDTO } from '@/types/device'
+import { subscribeDoors, getDoors, loadDoors, removeDoor, subscribeDevices, getDevices, loadDevices, removeDevice, addDoor, addDevice, subscribeZones, loadZones } from '@/services'
 import AddDoorDialog from './components/add-door-dialog'
 import AddDeviceDialog from './components/add-device-dialog'
 import DeviceAssignmentDialog from './components/device-assignment-dialog'
@@ -43,10 +44,12 @@ export default function DoorsDevicesPage() {
   useEffect(() => {
     const u1 = subscribeDoors(setDoors)
     const u2 = subscribeDevices(setDevices)
+    const u3 = subscribeZones(() => {})
     loadDoors().then(() => {})
     loadDevices().then(() => {})
+    loadZones().then(() => {})
     return () => {
-      u1(); u2()
+      u1(); u2(); u3()
     }
   }, [])
 
@@ -87,6 +90,10 @@ export default function DoorsDevicesPage() {
     setOpenAssignment(true)
   }
 
+  const refreshDoorsAndDevices = async () => {
+    await Promise.all([loadDoors(), loadDevices()])
+  }
+
   const handleImportDoors = async (validRows: Record<string, any>[]): Promise<number> => {
     let importedCount = 0
     
@@ -116,14 +123,25 @@ export default function DoorsDevicesPage() {
     
     for (const row of validRows) {
       try {
-        const newDevice: Device = {
-          id: String(Date.now() + Math.random()),
-          name: row.name,
-          type: row.type || 'reader',
-          doorIds: row.doorIds ? (Array.isArray(row.doorIds) ? row.doorIds : [row.doorIds]) : [],
-          doorNames: row.doorNames ? (Array.isArray(row.doorNames) ? row.doorNames : [row.doorNames]) : [],
-          status: row.status || 'online',
-          lastActivity: new Date().toISOString(),
+        const rawType = String(row.type || 'READER').toUpperCase()
+        const deviceType =
+          rawType === 'CONTROLLER' ? DeviceType.CONTROLLER :
+          rawType === 'LOCK' ? DeviceType.LOCK :
+          DeviceType.READER
+
+        const parsedDoorIds = row.doorIds
+          ? (Array.isArray(row.doorIds) ? row.doorIds : String(row.doorIds).split(','))
+              .map((v: any) => Number(v))
+              .filter((n: number) => Number.isFinite(n))
+          : []
+
+        const newDevice: DeviceCreateDTO = {
+          type: deviceType,
+          serialNumber: String(row.serialNumber || row.name || `SN-${Date.now()}`),
+          modelName: String(row.modelName || row.name || 'Imported Device'),
+          ip: row.ip ? String(row.ip) : undefined,
+          port: row.port ? Number(row.port) : undefined,
+          doorIds: parsedDoorIds,
         }
         
         await addDevice(newDevice)
@@ -331,9 +349,24 @@ export default function DoorsDevicesPage() {
           </Card>
         </TabsContent>
       </Tabs>
-      <AddDoorDialog open={openDoor} onOpenChange={(s) => { if (!s) setCurrentDoor(null); setOpenDoor(s) }} current={currentDoor} />
-      <AddDeviceDialog open={openDevice} onOpenChange={(s) => { if (!s) setCurrentDevice(null); setOpenDevice(s) }} current={currentDevice} />
-      <DeviceAssignmentDialog open={openAssignment} onOpenChange={(s) => { if (!s) setAssignmentDevice(null); setOpenAssignment(s) }} device={assignmentDevice} />
+      <AddDoorDialog
+        open={openDoor}
+        onOpenChange={(s) => { if (!s) setCurrentDoor(null); setOpenDoor(s) }}
+        current={currentDoor}
+        onSuccess={refreshDoorsAndDevices}
+      />
+      <AddDeviceDialog
+        open={openDevice}
+        onOpenChange={(s) => { if (!s) setCurrentDevice(null); setOpenDevice(s) }}
+        current={currentDevice}
+        onSuccess={refreshDoorsAndDevices}
+      />
+      <DeviceAssignmentDialog
+        open={openAssignment}
+        onOpenChange={(s) => { if (!s) setAssignmentDevice(null); setOpenAssignment(s) }}
+        device={assignmentDevice}
+        onSuccess={refreshDoorsAndDevices}
+      />
       
       <CSVImportDialog
         open={importDoorOpen}

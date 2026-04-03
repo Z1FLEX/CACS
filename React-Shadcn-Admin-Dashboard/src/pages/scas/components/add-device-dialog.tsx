@@ -34,6 +34,7 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   current?: DeviceDTO | null
+  onSuccess?: () => Promise<void> | void
 }
 
 // Zod schema for form validation
@@ -46,7 +47,7 @@ const schema = z.object({
 })
 type FormValues = z.infer<typeof schema>
 
-export default function AddDeviceDialog({ open, onOpenChange, current }: Props) {
+export default function AddDeviceDialog({ open, onOpenChange, current, onSuccess }: Props) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { type: DeviceType.READER, port: 8080 },
@@ -88,6 +89,7 @@ const onSubmit = async (values: FormValues) => {
         doorIds:      [],
       })
     }
+    if (onSuccess) await onSuccess()
     onOpenChange(false)
   } catch (error: unknown) {
     // Try to surface backend field errors into the form

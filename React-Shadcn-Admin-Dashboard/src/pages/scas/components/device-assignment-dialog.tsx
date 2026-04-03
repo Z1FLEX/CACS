@@ -26,9 +26,10 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   device: any
+  onSuccess?: () => Promise<void> | void
 }
 
-export default function DeviceAssignmentDialog({ open, onOpenChange, device }: Props) {
+export default function DeviceAssignmentDialog({ open, onOpenChange, device, onSuccess }: Props) {
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { doorIds: [] } })
   const [doors, setDoors] = useState<Door[]>(() => getDoors())
 
@@ -54,6 +55,7 @@ export default function DeviceAssignmentDialog({ open, onOpenChange, device }: P
       doorIds,
     }
     await updateDevice(String(device.id), payload)
+    if (onSuccess) await onSuccess()
     onOpenChange(false)
   }
 

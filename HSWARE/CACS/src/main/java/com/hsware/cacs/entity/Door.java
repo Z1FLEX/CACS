@@ -25,7 +25,7 @@ public class Door {
     private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "zone_id", nullable = false)
+    @JoinColumn(name = "zone_id", nullable = true)
     private Zone zone;
 
     @Column(name = "location", length = 255)

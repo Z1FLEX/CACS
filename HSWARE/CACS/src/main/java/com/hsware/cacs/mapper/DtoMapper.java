@@ -379,7 +379,11 @@ public class DtoMapper {
         if (dto.getLocation() != null) door.setLocation(dto.getLocation());
         
         if (dto.getZoneId() != null) {
-            zoneRepository.findById(dto.getZoneId()).ifPresent(door::setZone);
+            if (dto.getZoneId() == 0) {
+                door.setZone(null);
+            } else {
+                zoneRepository.findById(dto.getZoneId()).ifPresent(door::setZone);
+            }
         }
     }
 

@@ -24,7 +24,7 @@ export default function DoorZoneAssignModal({ open, onOpenChange, door, zones, o
   const [savingZoneId, setSavingZoneId] = useState<string | null>(null)
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null)
 
-  const currentZoneId = selectedZoneId ?? (door?.zoneId ? String(door.zoneId) : null)
+  const currentZoneId = selectedZoneId ?? (door?.zoneId && door.zoneId !== '0' ? String(door.zoneId) : null)
   const currentZone = currentZoneId ? zones.find((z) => z.id === currentZoneId) : undefined
 
   const filteredZones = useMemo(
@@ -48,7 +48,7 @@ export default function DoorZoneAssignModal({ open, onOpenChange, door, zones, o
     if (!door) return
     setSavingZoneId('__unassign__')
     try {
-      await updateDoor(String(door.id), { zoneId: 0 as any, zoneName: '' })
+      await updateDoor(String(door.id), { zoneId: '0', zoneName: '' })
       setSelectedZoneId(null)
       if (onSuccess) await onSuccess()
     } finally {

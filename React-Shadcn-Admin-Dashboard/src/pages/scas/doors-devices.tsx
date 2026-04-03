@@ -101,6 +101,13 @@ export default function DoorsDevicesPage() {
 
   const refreshDoorsAndDevices = async () => {
     await Promise.all([loadDoors(), loadDevices()])
+    // Update the zoneAssignDoor with the latest data if modal is open
+    if (zoneAssignDoor && openZoneAssign) {
+      const updatedDoor = getDoors().find(d => d.id === zoneAssignDoor.id)
+      if (updatedDoor) {
+        setZoneAssignDoor(updatedDoor)
+      }
+    }
   }
 
   const handleImportDoors = async (validRows: Record<string, any>[]): Promise<number> => {

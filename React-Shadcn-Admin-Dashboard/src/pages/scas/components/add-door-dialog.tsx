@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -13,14 +13,10 @@ import {
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/custom/button'
-import { SelectDropdown } from '@/components/select-dropdown'
-import type { Zone } from '@/types/scas'
-import { getZones, subscribeZones, addDoor, updateDoor } from '@/services'
+import { addDoor, updateDoor } from '@/services'
 
 const schema = z.object({
   name: z.string().min(1),
-  zoneId: z.string().min(1),
-  location: z.string().optional(),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -36,50 +32,31 @@ export default function AddDoorDialog({ open, onOpenChange, current, onSuccess }
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
-      zoneId: '',
-      location: ''
     }
   })
-  const [zones, setZones] = useState<Zone[]>(() => getZones())
-
-  useEffect(() => {
-    const unsub = subscribeZones(setZones)
-    return unsub
-  }, [])
 
   useEffect(() => {
     if (current) {
-      form.reset({ name: current.name, zoneId: current.zoneId, location: current.location })
+      form.reset({ name: current.name })
     }
   }, [current])
 
   const onSubmit = async (vals: FormValues) => {
     if (current) {
-      const updated = {
+      await updateDoor(String(current.id), {
         ...current,
         name: vals.name,
-        zoneId: parseInt(vals.zoneId),
-        zoneName: zones.find(z => z.id === vals.zoneId)?.name || current.zoneName,
-        location: vals.location || current.location,
-      }
-      await updateDoor(updated)
+      })
     } else {
-      const id = String(Date.now())
-      const zone = zones.find(z => z.id === vals.zoneId)
       const newDoor = {
-        id,
+        id: String(Date.now()),
         name: vals.name,
-        zoneId: parseInt(vals.zoneId),
-        zoneName: zone ? zone.name : 'Unknown',
-        location: vals.location || '',
       }
       await addDoor(newDoor as any)
     }
 
     form.reset({
       name: '',
-      zoneId: '',
-      location: ''
     })
     if (onSuccess) await onSuccess()
     onOpenChange(false)
@@ -89,8 +66,6 @@ export default function AddDoorDialog({ open, onOpenChange, current, onSuccess }
     <Dialog open={open} onOpenChange={(s) => { 
       form.reset({
         name: '',
-        zoneId: '',
-        location: ''
       }); 
       onOpenChange(s) 
     }}>
@@ -111,25 +86,6 @@ export default function AddDoorDialog({ open, onOpenChange, current, onSuccess }
               </FormItem>
             )} />
 
-            <FormField control={form.control} name='zoneId' render={({ field }) => (
-              <FormItem>
-                <FormLabel>Zone</FormLabel>
-                <FormControl>
-                  <SelectDropdown items={zones.map(z => ({ label: z.name, value: z.id }))} defaultValue={field.value} onValueChange={field.onChange} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-
-            <FormField control={form.control} name='location' render={({ field }) => (
-              <FormItem>
-                <FormLabel>Location</FormLabel>
-                <FormControl>
-                  <Input placeholder='Building A - Floor 1' {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
           </form>
         </Form>
         <DialogFooter>

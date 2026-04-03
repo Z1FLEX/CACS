@@ -44,8 +44,8 @@ export async function addDoor(door: Door): Promise<void> {
   await loadDoors()
 }
 
-export async function updateDoor(door: Door): Promise<void> {
-  await apiUpdateDoor(door.id, door)
+export async function updateDoor(id: string, payload: Partial<Door>): Promise<void> {
+  await apiUpdateDoor(id, payload)
   await loadDoors()
 }
 

@@ -5,10 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-wrapper'
-import type { Door, Device } from '@/types/scas'
+import type { Door, Device, Zone } from '@/types/scas'
 import { DeviceType, type DeviceCreateDTO } from '@/types/device'
-import { subscribeDoors, getDoors, loadDoors, removeDoor, subscribeDevices, getDevices, loadDevices, removeDevice, addDoor, addDevice, subscribeZones, loadZones } from '@/services'
+import { subscribeDoors, getDoors, loadDoors, removeDoor, subscribeDevices, getDevices, loadDevices, removeDevice, addDoor, addDevice, subscribeZones, loadZones, getZones } from '@/services'
 import AddDoorDialog from './components/add-door-dialog'
+import DoorZoneAssignModal from './components/door-zone-assign-modal'
 import AddDeviceDialog from './components/add-device-dialog'
 import DeviceAssignmentDialog from './components/device-assignment-dialog'
 import CSVImportDialog from '@/components/custom/csv-import-dialog'
@@ -32,11 +33,14 @@ const deviceColumns: ColumnConfig[] = [
 export default function DoorsDevicesPage() {
   const [doors, setDoors] = useState<Door[]>(() => getDoors())
   const [devices, setDevices] = useState<Device[]>(() => getDevices())
+  const [zones, setZones] = useState<Zone[]>(() => getZones())
   const [openDoor, setOpenDoor] = useState(false)
   const [openDevice, setOpenDevice] = useState(false)
   const [importDoorOpen, setImportDoorOpen] = useState(false)
   const [importDeviceOpen, setImportDeviceOpen] = useState(false)
   const [currentDoor, setCurrentDoor] = useState<any | null>(null)
+  const [zoneAssignDoor, setZoneAssignDoor] = useState<Door | null>(null)
+  const [openZoneAssign, setOpenZoneAssign] = useState(false)
   const [currentDevice, setCurrentDevice] = useState<any | null>(null)
   const [assignmentDevice, setAssignmentDevice] = useState<any | null>(null)
   const [openAssignment, setOpenAssignment] = useState(false)
@@ -44,7 +48,7 @@ export default function DoorsDevicesPage() {
   useEffect(() => {
     const u1 = subscribeDoors(setDoors)
     const u2 = subscribeDevices(setDevices)
-    const u3 = subscribeZones(() => {})
+    const u3 = subscribeZones(setZones)
     loadDoors().then(() => {})
     loadDevices().then(() => {})
     loadZones().then(() => {})
@@ -61,6 +65,11 @@ export default function DoorsDevicesPage() {
       setCurrentDoor(d)
       setOpenDoor(true)
     }
+  }
+
+  const handleOpenZoneAssign = (door: Door) => {
+    setZoneAssignDoor(door)
+    setOpenZoneAssign(true)
   }
 
   const handleDeleteDoor = async (id: string) => {
@@ -203,18 +212,30 @@ export default function DoorsDevicesPage() {
                       </TableHeader>
                       <TableBody>
                         {data.map((door) => (
-                          <TableRow key={door.id}>
+                          <TableRow
+                            key={door.id}
+                            className='cursor-pointer hover:bg-muted/50'
+                            onClick={() => handleOpenZoneAssign(door)}
+                          >
                             {visibleColumns.map(col => (
                               <TableCell key={`${door.id}-${col.key}`}>
                                 {col.key === 'name' && <span className='font-medium'>{door.name}</span>}
                                 {col.key === 'actions' && (
-                                  <div className='flex gap-2'>
+                                  <div className='flex gap-2' onClick={(e) => e.stopPropagation()}>
                                     <Button
                                       variant='ghost'
                                       size='sm'
                                       onClick={() => handleEditDoor(door.id)}
                                     >
                                       <IconEdit size={16} />
+                                    </Button>
+                                    <Button
+                                      variant='ghost'
+                                      size='sm'
+                                      title='Assign zone'
+                                      onClick={() => handleOpenZoneAssign(door)}
+                                    >
+                                      <IconLink size={16} />
                                     </Button>
                                     <Button
                                       variant='ghost'
@@ -353,6 +374,13 @@ export default function DoorsDevicesPage() {
         open={openDoor}
         onOpenChange={(s) => { if (!s) setCurrentDoor(null); setOpenDoor(s) }}
         current={currentDoor}
+        onSuccess={refreshDoorsAndDevices}
+      />
+      <DoorZoneAssignModal
+        open={openZoneAssign}
+        onOpenChange={(s) => { if (!s) setZoneAssignDoor(null); setOpenZoneAssign(s) }}
+        door={zoneAssignDoor}
+        zones={zones}
         onSuccess={refreshDoorsAndDevices}
       />
       <AddDeviceDialog

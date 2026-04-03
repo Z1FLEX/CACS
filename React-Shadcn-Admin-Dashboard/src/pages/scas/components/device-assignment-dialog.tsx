@@ -14,6 +14,7 @@ import { Form, FormField, FormItem, FormLabel, FormMessage } from '@/components/
 import { Button } from '@/components/custom/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { Door } from '@/types/scas'
+import type { DeviceUpdateDTO } from '@/types/device'
 import { getDoors, subscribeDoors, updateDevice } from '@/services'
 
 const schema = z.object({
@@ -45,14 +46,14 @@ export default function DeviceAssignmentDialog({ open, onOpenChange, device }: P
   const onSubmit = async (vals: FormValues) => {
     if (!device) return
 
-    const selectedDoors = doors.filter(d => vals.doorIds.includes(d.id))
-    const updated = {
-      ...device,
-      doorIds: vals.doorIds,
-      doorNames: selectedDoors.map(d => d.name),
+    const doorIds = vals.doorIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id))
+
+    const payload: DeviceUpdateDTO = {
+      doorIds,
     }
-    
-    await updateDevice(updated)
+    await updateDevice(String(device.id), payload)
     onOpenChange(false)
   }
 

@@ -4,6 +4,7 @@
  */
 import { api } from '@/api/client'
 import type { User, AccessCard, Zone, Door, Device, Profile, Schedule } from '@/types/scas'
+import type { DeviceCreateDTO, DeviceUpdateDTO } from '@/types/device'
 
 const hasBase = () =>
   typeof import.meta.env.VITE_API_BASE_URL === 'string' &&
@@ -11,6 +12,14 @@ const hasBase = () =>
 
 export function hasScasApi(): boolean {
   return hasBase()
+}
+
+function normalizeEntityId(id: unknown, entity: string): string {
+  if (typeof id === 'string' || typeof id === 'number') {
+    return String(id)
+  }
+  const type = id === null ? 'null' : Array.isArray(id) ? 'array' : typeof id
+  throw new Error(`Invalid ${entity} ID: expected string or number, got ${type}`)
 }
 
 // Users
@@ -99,18 +108,20 @@ export async function apiGetDevices(): Promise<Device[]> {
   return Array.isArray(data) ? data : []
 }
 
-export async function apiCreateDevice(payload: Partial<Device>): Promise<Device> {
+export async function apiCreateDevice(payload: DeviceCreateDTO): Promise<Device> {
   const { data } = await api.post<Device>('/api/devices', payload)
   return data
 }
 
-export async function apiUpdateDevice(id: string, payload: Partial<Device>): Promise<Device> {
-  const { data } = await api.put<Device>(`/api/devices/${id}`, payload)
+export async function apiUpdateDevice(id: string, payload: DeviceUpdateDTO): Promise<Device> {
+  const deviceId = normalizeEntityId(id, 'device')
+  const { data } = await api.put<Device>(`/api/devices/${deviceId}`, payload)
   return data
 }
 
 export async function apiDeleteDevice(id: string): Promise<void> {
-  await api.delete(`/api/devices/${id}`)
+  const deviceId = normalizeEntityId(id, 'device')
+  await api.delete(`/api/devices/${deviceId}`)
 }
 
 // Profiles

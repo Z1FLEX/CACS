@@ -4,7 +4,7 @@
 // devices.service.ts
 
 import type { Device } from '@/types/scas'
-import type { DeviceCreateDTO, DeviceUpdateDTO, DeviceType } from '@/types/device'
+import type { DeviceCreateDTO, DeviceUpdateDTO } from '@/types/device'
 import {
   getDevices as storeGetDevices,
   subscribeDevices as storeSubscribeDevices,

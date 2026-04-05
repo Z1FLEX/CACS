@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'STYrene B';
+  src: url('/fonts/5d86f2e8ccc2811b9392aa03b7ce4a63.woff2') format('woff2'),
+       url('/fonts/5d86f2e8ccc2811b9392aa03b7ce4a63.woff') format('woff'),
+       url('/fonts/5d86f2e8ccc2811b9392aa03b7ce4a63.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     /* Custom CSS Variables */

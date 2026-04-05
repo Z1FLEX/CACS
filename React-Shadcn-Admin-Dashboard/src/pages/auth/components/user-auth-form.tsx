@@ -77,20 +77,22 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   }
 
   return (
-    <div className={cn('grid gap-5', className)} {...props}>
+    <div className={cn('grid gap-6', className)} {...props}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <div className='grid gap-4'>
+          <div className='grid gap-6'>
             <FormField
               control={form.control}
               name='email'
               render={({ field }) => (
-                <FormItem className='space-y-1'>
-                  <FormLabel className='text-slate-700'>Email</FormLabel>
+                <FormItem className='space-y-2'>
+                  <FormLabel className='text-[0.7rem] font-medium uppercase tracking-[0.08em] text-white/62'>
+                    Email
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder='name@example.com'
-                      className='h-11 border-slate-300 bg-white focus-visible:ring-slate-900'
+                      className='h-12 rounded-none border-0 border-b border-white/28 bg-transparent px-0 py-0 text-base tracking-[-0.02em] text-white placeholder:text-white/34 focus-visible:border-white/60 focus-visible:ring-0'
                       {...field}
                     />
                   </FormControl>
@@ -102,12 +104,14 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               control={form.control}
               name='password'
               render={({ field }) => (
-                <FormItem className='space-y-1'>
+                <FormItem className='space-y-2'>
                   <div className='flex items-center justify-between'>
-                    <FormLabel className='text-slate-700'>Password</FormLabel>
+                    <FormLabel className='text-[0.7rem] font-medium uppercase tracking-[0.08em] text-white/62'>
+                      Password
+                    </FormLabel>
                     <Link
                       to='/forgot-password'
-                      className='text-sm font-medium text-slate-500 transition hover:text-slate-900'
+                      className='text-xs font-medium tracking-[-0.01em] text-white/42 transition hover:text-white/72'
                     >
                       Forgot password?
                     </Link>
@@ -115,7 +119,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                   <FormControl>
                     <PasswordInput
                       placeholder='********'
-                      className='h-11 border-slate-300 bg-white focus-visible:ring-slate-900'
+                      className='h-12 rounded-none border-0 border-b border-white/28 bg-transparent px-0 py-0 pr-11 text-base tracking-[0.2em] text-white placeholder:text-white/34 focus-visible:border-white/60 focus-visible:ring-0'
                       {...field}
                     />
                   </FormControl>
@@ -123,7 +127,10 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                 </FormItem>
               )}
             />
-            <Button className='mt-2 h-11 w-full bg-slate-900 text-white hover:bg-slate-800' loading={isLoading}>
+            <Button
+              className='ml-auto mt-6 h-20 w-20 rounded-full border border-black bg-white text-[0.68rem] font-semibold uppercase tracking-[0.04em] text-black shadow-[0_18px_30px_rgba(0,0,0,0.28)] transition hover:bg-white/90'
+              loading={isLoading}
+            >
               Login
             </Button>
           </div>

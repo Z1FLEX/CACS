@@ -13,13 +13,15 @@ import java.time.Instant;
 @AllArgsConstructor
 public class TimeSlotDTO extends BaseDTO {
     private Integer scheduleDayId;
+    private String title;
     private Integer dayIndex;
     private String startTime;
     private String endTime;
     
-    public TimeSlotDTO(Integer id, Integer scheduleDayId, Integer dayIndex, String startTime, String endTime, Instant createdAt) {
+    public TimeSlotDTO(Integer id, Integer scheduleDayId, String title, Integer dayIndex, String startTime, String endTime, Instant createdAt) {
         this.id = id;
         this.scheduleDayId = scheduleDayId;
+        this.title = title;
         this.dayIndex = dayIndex;
         this.startTime = startTime;
         this.endTime = endTime;

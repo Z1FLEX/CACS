@@ -106,6 +106,7 @@ public class ScheduleService {
         // Create time slot
         DayTimeSlot timeSlot = new DayTimeSlot();
         timeSlot.setScheduleDay(scheduleDay);
+        timeSlot.setTitle(dto.getTitle() != null && !dto.getTitle().isBlank() ? dto.getTitle().trim() : scheduleDay.getSchedule().getName());
         timeSlot.setStartTime(LocalTime.parse(dto.getStartTime()));
         timeSlot.setEndTime(LocalTime.parse(dto.getEndTime()));
         timeSlot = dayTimeSlotRepository.save(timeSlot);
@@ -144,6 +145,9 @@ public class ScheduleService {
         }
         if (dto.getEndTime() != null) {
             timeSlot.setEndTime(LocalTime.parse(dto.getEndTime()));
+        }
+        if (dto.getTitle() != null) {
+            timeSlot.setTitle(dto.getTitle().isBlank() ? timeSlot.getScheduleDay().getSchedule().getName() : dto.getTitle().trim());
         }
         
         timeSlot = dayTimeSlotRepository.save(timeSlot);

@@ -16,30 +16,25 @@ function toTimeString(date: Date): string {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
 }
 
-// Helper function to convert FullCalendar day to backend day index (1=Monday, ..., 7=Sunday)
 function toBackendDay(day: number): number {
   return day === 0 ? 7 : day // Convert 0 (Sunday) to 7 for backend
 }
 
-// Helper function to create a date for a specific day and time
-function getStartOfWeek(): Date {
+function getStartOfCalendarWeek(): Date {
   const now = new Date()
-  const day = now.getDay() // 0 (Sun) - 6 (Sat)
-  const diff = day === 0 ? -6 : 1 - day // shift to Monday
-
-  const monday = new Date(now)
-  monday.setDate(now.getDate() + diff)
-  monday.setHours(0, 0, 0, 0)
-
-  return monday
+  const sunday = new Date(now)
+  sunday.setDate(now.getDate() - now.getDay())
+  sunday.setHours(0, 0, 0, 0)
+  return sunday
 }
 
 function createDateTime(dayIndex: number, time: string): Date {
-  const base = getStartOfWeek()
+  const base = getStartOfCalendarWeek()
 
   const date = new Date(base)
   const normalizedDayIndex = isValidDayIndex(dayIndex) ? dayIndex : 1
-  date.setDate(base.getDate() + (normalizedDayIndex - 1))
+  const calendarDayOffset = normalizedDayIndex === 7 ? 0 : normalizedDayIndex
+  date.setDate(base.getDate() + calendarDayOffset)
 
   const [rawHours, rawMinutes] = time.split(':').map(Number)
   const hours = Number.isFinite(rawHours) ? rawHours : 0
@@ -56,7 +51,7 @@ function timeSlotToCalendarEvent(timeSlot: TimeSlot, scheduleName: string, sched
   
   return {
     id: timeSlot.id.toString(),
-    title: scheduleName,
+    title: timeSlot.title?.trim() || scheduleName || 'Event',
     start: startDate,
     end: endDate,
     dayIndex: timeSlot.dayIndex,
@@ -138,6 +133,7 @@ export async function addCalendarEvent(event: CalendarEvent, scheduleId: number)
     }
 
     const timeSlot = {
+      title: event.title.trim(),
       dayIndex,
       startTime: toTimeString(startTime),
       endTime: toTimeString(endTime)
@@ -178,6 +174,7 @@ export async function updateCalendarEvent(event: CalendarEvent): Promise<void> {
     }
     
     const timeSlotUpdate = {
+      title: event.title.trim(),
       dayIndex,
       startTime: toTimeString(startTime),
       endTime: toTimeString(endTime)

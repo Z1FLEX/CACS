@@ -20,6 +20,7 @@ export interface ScheduleUpdateDTO {
 }
 
 export interface TimeSlotCreateDTO {
+  title?: string
   dayIndex: number
   startTime: string
   endTime: string
@@ -33,6 +34,7 @@ export interface ScheduleWithTimeSlots {
 
 interface TimeSlotDTO {
   id: number
+  title?: string
   dayIndex: number
   startTime: string
   endTime: string
@@ -73,6 +75,7 @@ class ScheduleAPI {
       name: schedule.name,
       timeSlots: timeSlots.data.map((slot) => ({
         id: slot.id,
+        title: slot.title,
         dayIndex: slot.dayIndex,
         startTime: slot.startTime,
         endTime: slot.endTime

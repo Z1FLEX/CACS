@@ -16,6 +16,7 @@ export interface ScheduleEvent {
 
 export interface TimeSlot {
   id: number;
+  title?: string;
   dayIndex: number; // 1-7 (Monday-Sunday)
   startTime: string; // HH:mm format
   endTime: string; // HH:mm format

@@ -443,6 +443,7 @@ public class DtoMapper {
         return new TimeSlotDTO(
             timeSlot.getId(),
             timeSlot.getScheduleDay().getId(),
+            nullToEmpty(timeSlot.getTitle()),
             timeSlot.getScheduleDay().getDayIndex(),
             timeSlot.getStartTime().toString(),
             timeSlot.getEndTime().toString(),
@@ -455,6 +456,7 @@ public class DtoMapper {
         
         DayTimeSlot timeSlot = new DayTimeSlot();
         timeSlot.setScheduleDay(scheduleDay);
+        timeSlot.setTitle(dto.getTitle());
         timeSlot.setStartTime(java.time.LocalTime.parse(dto.getStartTime()));
         timeSlot.setEndTime(java.time.LocalTime.parse(dto.getEndTime()));
         
@@ -464,6 +466,9 @@ public class DtoMapper {
     public void updateTimeSlotFromDTO(TimeSlotUpdateDTO dto, DayTimeSlot timeSlot) {
         if (dto == null || timeSlot == null) return;
         
+        if (dto.getTitle() != null) {
+            timeSlot.setTitle(dto.getTitle());
+        }
         if (dto.getStartTime() != null) {
             timeSlot.setStartTime(java.time.LocalTime.parse(dto.getStartTime()));
         }

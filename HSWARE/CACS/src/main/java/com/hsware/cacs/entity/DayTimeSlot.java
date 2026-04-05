@@ -22,6 +22,9 @@ public class DayTimeSlot {
     @JoinColumn(name = "schedule_day_id", nullable = false)
     private ScheduleDay scheduleDay;
 
+    @Column(name = "title", nullable = false, length = 100)
+    private String title;
+
     @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
 

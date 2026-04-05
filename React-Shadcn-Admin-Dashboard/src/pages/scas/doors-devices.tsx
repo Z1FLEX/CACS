@@ -19,7 +19,6 @@ import { IconPlus, IconEdit, IconTrash, IconUpload, IconLink } from '@tabler/ico
 const doorColumns: ColumnConfig[] = [
   { key: 'name', label: 'Door Name', visible: true },
   { key: 'zoneName', label: 'Zone', visible: true },
-  { key: 'location', label: 'Location', visible: true },
   { key: 'actions', label: 'Actions', visible: true },
 ]
 
@@ -401,20 +400,17 @@ export default function DoorsDevicesPage() {
           { key: 'name', label: 'Door Name', required: true, type: 'string' },
           { key: 'zoneId', label: 'Zone ID', required: false, type: 'string' },
           { key: 'zoneName', label: 'Zone Name', required: false, type: 'string' },
-          { key: 'location', label: 'Location', required: false, type: 'string' },
         ]}
         exampleData={[
           {
             name: 'Main Entrance',
             zoneId: 'zone1',
-            zoneName: 'Reception',
-            location: 'Building A - Floor 1'
+            zoneName: 'Reception'
           },
           {
             name: 'Server Room Door',
             zoneId: 'zone2',
-            zoneName: 'Server Room',
-            location: 'Building B - Basement'
+            zoneName: 'Server Room'
           }
         ]}
         onImport={handleImportDoors}

@@ -77,18 +77,22 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   }
 
   return (
-    <div className={cn('grid gap-6', className)} {...props}>
+    <div className={cn('grid gap-5', className)} {...props}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <div className='grid gap-2'>
+          <div className='grid gap-4'>
             <FormField
               control={form.control}
               name='email'
               render={({ field }) => (
                 <FormItem className='space-y-1'>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel className='text-slate-700'>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder='name@example.com' {...field} />
+                    <Input
+                      placeholder='name@example.com'
+                      className='h-11 border-slate-300 bg-white focus-visible:ring-slate-900'
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -100,22 +104,26 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               render={({ field }) => (
                 <FormItem className='space-y-1'>
                   <div className='flex items-center justify-between'>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className='text-slate-700'>Password</FormLabel>
                     <Link
                       to='/forgot-password'
-                      className='text-sm font-medium text-muted-foreground hover:opacity-75'
+                      className='text-sm font-medium text-slate-500 transition hover:text-slate-900'
                     >
                       Forgot password?
                     </Link>
                   </div>
                   <FormControl>
-                    <PasswordInput placeholder='********' {...field} />
+                    <PasswordInput
+                      placeholder='********'
+                      className='h-11 border-slate-300 bg-white focus-visible:ring-slate-900'
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button className='mt-2' loading={isLoading}>
+            <Button className='mt-2 h-11 w-full bg-slate-900 text-white hover:bg-slate-800' loading={isLoading}>
               Login
             </Button>
           </div>

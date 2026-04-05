@@ -9,6 +9,7 @@ import { Trash2, X } from 'lucide-react'
 import { addMinutes, format } from "date-fns"
 import { Button } from '@/components/custom/button'
 import { toast } from '@/components/ui/use-toast'
+import { EmptyState } from '@/components/custom/empty-state'
 import { CalendarEvent } from './data/schema'
 import { 
   loadCalendarEvents, 
@@ -26,24 +27,16 @@ export default function SchedulesPage() {
   const [isEventModalOpen, setIsEventModalOpen] = useState<boolean>(false)
   const [schedules, setSchedules] = useState<ScheduleDTO[]>([])
   const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null)
+  const [isCreateScheduleModalOpen, setIsCreateScheduleModalOpen] = useState(false)
+  const [newScheduleName, setNewScheduleName] = useState('')
+  const [isCreatingSchedule, setIsCreatingSchedule] = useState(false)
   const selectedSchedule = schedules.find(schedule => schedule.id === selectedScheduleId) || null
   const selectedScheduleName = selectedSchedule?.name || ''
 
   useEffect(() => {
     const initializeData = async () => {
       try {
-        // Load schedules
-        const schedulesData = await scheduleAPI.getSchedules()
-        setSchedules(schedulesData)
-        
-        // Select first schedule by default if available
-        if (schedulesData.length > 0) {
-          const firstSchedule = schedulesData[0]
-          setSelectedScheduleId(firstSchedule.id)
-          await loadCalendarEvents(firstSchedule.id)
-        } else {
-          await loadCalendarEvents()
-        }
+        await refreshSchedules()
       } catch (error) {
         console.error('Failed to initialize data:', error)
         toast({
@@ -59,6 +52,62 @@ export default function SchedulesPage() {
     const unsubscribe = subscribeCalendarEvents(setEvents)
     return unsubscribe
   }, [])
+
+  const refreshSchedules = async (preferredScheduleId?: number) => {
+    const schedulesData = await scheduleAPI.getSchedules()
+    setSchedules(schedulesData)
+
+    if (schedulesData.length === 0) {
+      setSelectedScheduleId(null)
+      await loadCalendarEvents()
+      return
+    }
+
+    const nextSelectedSchedule =
+      schedulesData.find((schedule) => schedule.id === preferredScheduleId) ??
+      schedulesData.find((schedule) => schedule.id === selectedScheduleId) ??
+      schedulesData[0]
+
+    setSelectedScheduleId(nextSelectedSchedule.id)
+    await loadCalendarEvents(nextSelectedSchedule.id)
+  }
+
+  const handleScheduleChange = async (scheduleId: number) => {
+    setSelectedScheduleId(scheduleId)
+    await loadCalendarEvents(scheduleId)
+  }
+
+  const handleCreateSchedule = async () => {
+    const trimmedName = newScheduleName.trim()
+    if (!trimmedName) {
+      toast({
+        title: "Schedule name required",
+        description: "Enter a name before creating a schedule.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setIsCreatingSchedule(true)
+      const createdSchedule = await scheduleAPI.createSchedule({ name: trimmedName })
+      await refreshSchedules(createdSchedule.id)
+      setNewScheduleName('')
+      setIsCreateScheduleModalOpen(false)
+      toast({
+        title: "Schedule created successfully!",
+      })
+    } catch (error) {
+      console.error('Failed to create schedule:', error)
+      toast({
+        title: "Error creating schedule",
+        description: "Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsCreatingSchedule(false)
+    }
+  }
 
   const handleEventClick = (clickInfo: EventClickArg) => {
     const event = clickInfo.event
@@ -205,32 +254,88 @@ const handleSaveEvent = async () => {
               <h2 className="text-2xl font-bold tracking-tight">Weekly Schedule</h2>
             </div>
             <div className="space-x-2 flex items-center">
-              <Button variant='outline' onClick={handleAddEvent}>+ Add Event</Button>
+              {schedules.length > 0 && (
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={selectedScheduleId ?? ''}
+                  onChange={(e) => void handleScheduleChange(Number(e.target.value))}
+                >
+                  {schedules.map((schedule) => (
+                    <option key={schedule.id} value={schedule.id}>
+                      {schedule.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <Button variant='outline' onClick={() => setIsCreateScheduleModalOpen(true)}>
+                + Create Schedule
+              </Button>
+              <Button variant='outline' onClick={handleAddEvent} disabled={!selectedScheduleId}>
+                + Add Event
+              </Button>
             </div>
           </div>
-          <FullCalendar
-            ref={calendarRef}
-            plugins={[timeGridPlugin, interactionPlugin]}
-            initialView="timeGridWeek"
-            headerToolbar={false}
-            allDaySlot={false}
-            slotMinTime="08:00:00"
-            slotMaxTime="20:00:00"
-            height="auto"
-            events={events}
-            eventClick={handleEventClick}
-            dateClick={handleDateClick}
-            eventContent={renderEventContent}
-            views={{
-              timeGridWeek: {
-                titleFormat: { weekday: 'long' },
-                dayHeaderFormat: { weekday: 'short' }
-              }
-            }}
-            dayHeaderFormat={{ weekday: 'short' }}
-          />
+          {schedules.length === 0 ? (
+            <div className="rounded-lg border border-dashed py-16">
+              <EmptyState
+                title="No schedules yet"
+                description="Create a schedule first, then you can start adding weekly events."
+              />
+            </div>
+          ) : (
+            <FullCalendar
+              ref={calendarRef}
+              plugins={[timeGridPlugin, interactionPlugin]}
+              initialView="timeGridWeek"
+              headerToolbar={false}
+              allDaySlot={false}
+              slotMinTime="08:00:00"
+              slotMaxTime="20:00:00"
+              height="auto"
+              events={events}
+              eventClick={handleEventClick}
+              dateClick={handleDateClick}
+              eventContent={renderEventContent}
+              views={{
+                timeGridWeek: {
+                  titleFormat: { weekday: 'long' },
+                  dayHeaderFormat: { weekday: 'short' }
+                }
+              }}
+              dayHeaderFormat={{ weekday: 'short' }}
+            />
+          )}
         </div>
       </div>
+
+      {isCreateScheduleModalOpen && (
+        <div className="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-96 rounded-lg bg-white p-6 shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Create Schedule</h3>
+              <Button variant="ghost" onClick={() => setIsCreateScheduleModalOpen(false)}>
+                <X />
+              </Button>
+            </div>
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-medium">Schedule Name</label>
+              <Input
+                placeholder="e.g. Business Hours"
+                value={newScheduleName}
+                onChange={(e) => setNewScheduleName(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsCreateScheduleModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateSchedule} loading={isCreatingSchedule}>
+                Create Schedule
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isEventModalOpen && currentEvent && (
         <div className="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50">

@@ -40,6 +40,8 @@ interface TimeSlotDTO {
   endTime: string
 }
 
+export interface PersistedTimeSlotDTO extends TimeSlotDTO {}
+
 class ScheduleAPI {
   async getSchedules(): Promise<ScheduleDTO[]> {
     const response = await api.get(`${API_PREFIX}/schedules`)
@@ -84,13 +86,15 @@ class ScheduleAPI {
   }
 
   // Create a time slot for a specific day
-  async createTimeSlot(scheduleId: number, timeSlot: TimeSlotCreateDTO): Promise<void> {
-    await api.post(`${API_PREFIX}/schedules/${scheduleId}/timeslots`, timeSlot)
+  async createTimeSlot(scheduleId: number, timeSlot: TimeSlotCreateDTO): Promise<PersistedTimeSlotDTO> {
+    const response = await api.post<PersistedTimeSlotDTO>(`${API_PREFIX}/schedules/${scheduleId}/timeslots`, timeSlot)
+    return response.data
   }
 
   // Update a time slot
-  async updateTimeSlot(timeSlotId: number, timeSlot: Partial<TimeSlotCreateDTO>): Promise<void> {
-    await api.put(`${API_PREFIX}/timeslots/${timeSlotId}`, timeSlot)
+  async updateTimeSlot(timeSlotId: number, timeSlot: Partial<TimeSlotCreateDTO>): Promise<PersistedTimeSlotDTO> {
+    const response = await api.put<PersistedTimeSlotDTO>(`${API_PREFIX}/timeslots/${timeSlotId}`, timeSlot)
+    return response.data
   }
 
   // Delete a time slot

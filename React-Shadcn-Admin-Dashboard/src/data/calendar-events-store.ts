@@ -1,5 +1,5 @@
 import { CalendarEvent, ScheduleEvent, TimeSlot } from '@/pages/scas/data/schema'
-import { scheduleAPI } from '@/services/schedule-api'
+import { PersistedTimeSlotDTO, scheduleAPI } from '@/services/schedule-api'
 
 type CalendarEventsSubscriber = (events: CalendarEvent[]) => void
 
@@ -60,6 +60,44 @@ function timeSlotToCalendarEvent(timeSlot: TimeSlot, scheduleName: string, sched
   }
 }
 
+function notifySubscribers(): void {
+  subscribers.forEach((callback) => callback(calendarEvents))
+}
+
+function upsertCalendarEvent(event: CalendarEvent): void {
+  const existingIndex = calendarEvents.findIndex((current) => current.id === event.id)
+
+  if (existingIndex === -1) {
+    calendarEvents = [...calendarEvents, event]
+  } else {
+    calendarEvents = calendarEvents.map((current, index) =>
+      index === existingIndex ? event : current
+    )
+  }
+
+  notifySubscribers()
+}
+
+function toCalendarEventFromPersistedTimeSlot(
+  timeSlot: PersistedTimeSlotDTO,
+  scheduleId: number,
+  fallbackTitle: string
+): CalendarEvent {
+  const scheduleName = currentSchedule?.id === scheduleId ? currentSchedule.name : ''
+
+  return timeSlotToCalendarEvent(
+    {
+      id: timeSlot.id,
+      title: timeSlot.title?.trim() || fallbackTitle,
+      dayIndex: timeSlot.dayIndex,
+      startTime: timeSlot.startTime,
+      endTime: timeSlot.endTime,
+    },
+    scheduleName,
+    scheduleId
+  )
+}
+
 export async function loadCalendarEvents(scheduleId?: number): Promise<void> {
   const requestId = ++latestLoadRequestId
 
@@ -97,7 +135,7 @@ export async function loadCalendarEvents(scheduleId?: number): Promise<void> {
 
     currentSchedule = nextCurrentSchedule
     calendarEvents = nextEvents
-    subscribers.forEach(callback => callback(calendarEvents))
+    notifySubscribers()
   } catch (error) {
     console.error('Failed to load calendar events:', error)
     // Keep existing events on error
@@ -110,7 +148,7 @@ export function getCalendarEvents(): CalendarEvent[] {
 
 export function setCalendarEvents(events: CalendarEvent[]): void {
   calendarEvents = events
-  subscribers.forEach(callback => callback(calendarEvents))
+  notifySubscribers()
 }
 
 export async function addCalendarEvent(event: CalendarEvent, scheduleId: number): Promise<void> {
@@ -139,11 +177,14 @@ export async function addCalendarEvent(event: CalendarEvent, scheduleId: number)
       endTime: toTimeString(endTime)
     }
 
-    // Create time slot via API
-    await scheduleAPI.createTimeSlot(scheduleId, timeSlot)
-    
-    // Reload events from server
-    await loadCalendarEvents(scheduleId)
+    const persistedTimeSlot = await scheduleAPI.createTimeSlot(scheduleId, timeSlot)
+    const persistedEvent = toCalendarEventFromPersistedTimeSlot(
+      persistedTimeSlot,
+      scheduleId,
+      event.title.trim()
+    )
+
+    upsertCalendarEvent(persistedEvent)
   } catch (error) {
     console.error('Failed to add calendar event:', error)
     throw error
@@ -180,11 +221,19 @@ export async function updateCalendarEvent(event: CalendarEvent): Promise<void> {
       endTime: toTimeString(endTime)
     }
 
-    // Update time slot via API
-    await scheduleAPI.updateTimeSlot(event.timeSlotId, timeSlotUpdate)
-    
-    // Reload events from server
-    await loadCalendarEvents(event.scheduleId ?? currentSchedule?.id)
+    const scheduleId = event.scheduleId ?? currentSchedule?.id
+    if (!scheduleId) {
+      throw new Error('Event has no schedule ID')
+    }
+
+    const persistedTimeSlot = await scheduleAPI.updateTimeSlot(event.timeSlotId, timeSlotUpdate)
+    const persistedEvent = toCalendarEventFromPersistedTimeSlot(
+      persistedTimeSlot,
+      scheduleId,
+      event.title.trim()
+    )
+
+    upsertCalendarEvent(persistedEvent)
   } catch (error) {
     console.error('Failed to update calendar event:', error)
     throw error
@@ -198,11 +247,10 @@ export async function removeCalendarEvent(id: string): Promise<void> {
       throw new Error('Event not found or has no time slot ID')
     }
 
-    // Delete time slot via API
     await scheduleAPI.deleteTimeSlot(event.timeSlotId)
-    
-    // Reload events from server
-    await loadCalendarEvents(event.scheduleId ?? currentSchedule?.id)
+
+    calendarEvents = calendarEvents.filter((current) => current.id !== id)
+    notifySubscribers()
   } catch (error) {
     console.error('Failed to remove calendar event:', error)
     throw error

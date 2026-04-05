@@ -5,13 +5,14 @@ import { Badge } from '@/components/ui/badge'
 import { IconPlus, IconClock, IconMapPin } from '@tabler/icons-react'
 import { getProfiles, subscribeProfiles, loadProfiles, removeProfile, loadSchedules, loadZones, getSchedules, getZones } from '@/services'
 import AddProfileDialog from './components/add-profile-dialog'
+import type { Profile } from '@/types/scas'
 
 export default function AccessProfilesPage() {
   const [profiles, setProfiles] = useState(() => getProfiles())
   const [schedules, setSchedules] = useState(() => getSchedules())
   const [zones, setZones] = useState(() => getZones())
   const [open, setOpen] = useState(false)
-  const [current, setCurrent] = useState<any | null>(null)
+  const [current, setCurrent] = useState<Profile | null>(null)
 
   useEffect(() => {
     const unsub = subscribeProfiles(setProfiles)
@@ -52,14 +53,16 @@ export default function AccessProfilesPage() {
     }
   }
 
-  const getScheduleName = (scheduleId?: string) => {
-    if (!scheduleId) return 'No schedule'
-    const schedule = schedules.find(s => s.id === scheduleId)
-    return schedule?.name || 'Unknown schedule'
+  const getScheduleNames = (scheduleIds: string[]) => {
+    if (scheduleIds.length === 0) return ['No schedules assigned']
+    return scheduleIds.map((id) => {
+      const schedule = schedules.find((item) => item.id === id)
+      return schedule?.name || 'Unknown schedule'
+    })
   }
 
-  const getZoneNames = (zoneIds?: string[]) => {
-    if (!zoneIds || zoneIds.length === 0) return ['No zones assigned']
+  const getZoneNames = (zoneIds: string[]) => {
+    if (zoneIds.length === 0) return ['No zones assigned']
     return zoneIds.map(id => {
       const zone = zones.find(z => z.id === id)
       return zone?.name || 'Unknown zone'
@@ -101,8 +104,19 @@ export default function AccessProfilesPage() {
               <div className='space-y-2'>
                 <div className='flex items-center gap-2 text-sm'>
                   <IconClock size={14} />
-                  <span className='font-medium'>Schedule:</span>
-                  <span className='text-muted-foreground'>{getScheduleName(profile.scheduleId)}</span>
+                  <span className='font-medium'>Schedules:</span>
+                  <div className='flex flex-wrap gap-1'>
+                    {getScheduleNames(profile.scheduleIds).slice(0, 3).map((scheduleName) => (
+                      <Badge key={scheduleName} variant='secondary' className='text-xs'>
+                        {scheduleName}
+                      </Badge>
+                    ))}
+                    {profile.scheduleIds.length > 3 && (
+                      <Badge variant='outline' className='text-xs'>
+                        +{profile.scheduleIds.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 
                 <div className='flex items-start gap-2 text-sm'>
@@ -111,7 +125,7 @@ export default function AccessProfilesPage() {
                     <span className='font-medium'>Zones:</span>
                     <div className='mt-1 space-y-1'>
                       {getZoneNames(profile.zoneIds).slice(0, 3).map((zoneName, index) => {
-                        const zoneId = profile.zoneIds?.[index]
+                        const zoneId = profile.zoneIds[index]
                         const zone = zones.find(z => z.id === zoneId)
                         return (
                           <div key={index} className='flex items-center gap-1'>
@@ -124,7 +138,7 @@ export default function AccessProfilesPage() {
                           </div>
                         )
                       })}
-                      {profile.zoneIds && profile.zoneIds.length > 3 && (
+                      {profile.zoneIds.length > 3 && (
                         <span className='text-muted-foreground text-xs'>
                           +{profile.zoneIds.length - 3} more zones
                         </span>

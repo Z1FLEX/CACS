@@ -4,6 +4,7 @@ import com.hsware.cacs.dto.ProfileDTO;
 import com.hsware.cacs.dto.ProfileCreateDTO;
 import com.hsware.cacs.dto.ProfileUpdateDTO;
 import com.hsware.cacs.service.ProfileService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,13 +33,13 @@ public class ProfileController {
     }
 
     @PostMapping
-    public ResponseEntity<ProfileDTO> create(@RequestBody ProfileCreateDTO body) {
+    public ResponseEntity<ProfileDTO> create(@Valid @RequestBody ProfileCreateDTO body) {
         ProfileDTO created = profileService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProfileDTO> update(@PathVariable Integer id, @RequestBody ProfileUpdateDTO body) {
+    public ResponseEntity<ProfileDTO> update(@PathVariable Integer id, @Valid @RequestBody ProfileUpdateDTO body) {
         return profileService.update(id, body)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

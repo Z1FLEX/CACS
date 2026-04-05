@@ -141,9 +141,9 @@ export interface Profile {
   name: string
   description?: string
   permissions?: number
-  scheduleId?: string
-  schedule?: Schedule
-  zoneIds?: string[]
+  scheduleIds: string[]
+  schedules?: Schedule[]
+  zoneIds: string[]
   zones?: Zone[]
   createdAt?: string
   deletedAt?: string | null

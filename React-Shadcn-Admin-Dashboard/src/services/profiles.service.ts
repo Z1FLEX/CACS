@@ -20,7 +20,11 @@ function normalizeProfile(p: any): Profile {
   return { 
     ...p, 
     id: String(p.id),
-    scheduleId: p.scheduleId ? String(p.scheduleId) : undefined,
+    scheduleIds: Array.isArray(p.scheduleIds)
+      ? p.scheduleIds.map((id: number | string) => String(id))
+      : p.scheduleId != null
+        ? [String(p.scheduleId)]
+        : [],
     zoneIds: p.zoneIds ? p.zoneIds.map((id: number) => String(id)) : [],
   }
 }

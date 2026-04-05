@@ -1,5 +1,7 @@
 package com.hsware.cacs.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,9 +13,13 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProfileUpdateDTO {
+    @NotBlank(message = "Profile name is required")
     @Size(max = 100, message = "Profile name must not exceed 100 characters")
     private String name;
-    
-    private Integer scheduleId;
+
+    @NotEmpty(message = "At least one schedule must be assigned")
+    private Set<Integer> scheduleIds;
+
+    @NotEmpty(message = "At least one zone must be assigned")
     private Set<Integer> zoneIds;
 }

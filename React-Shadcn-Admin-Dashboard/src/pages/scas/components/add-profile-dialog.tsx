@@ -1,38 +1,51 @@
-import { useState, useEffect } from 'react'
-import { z } from 'zod'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog'
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/custom/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { IconArrowLeft, IconArrowRight, IconCheck, IconClock, IconMapPin, IconSearch } from '@tabler/icons-react'
-import type { Profile, Zone } from '@/types/scas'
-import type { CalendarEvent } from '@/pages/scas/data/schema'
-import { addProfile, updateProfile, loadZones, getZones } from '@/services'
-import { subscribeCalendarEvents } from '@/data/calendar-events-store'
-import { format } from 'date-fns'
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconCheck,
+  IconClock,
+  IconMapPin,
+  IconSearch,
+} from '@tabler/icons-react'
+import { addProfile, getSchedules, getZones, loadSchedules, loadZones, updateProfile } from '@/services'
+import type { Profile, Schedule, Zone } from '@/types/scas'
 
 const step1Schema = z.object({
-  name: z.string().min(1, 'Profile name is required'),
-  scheduleId: z.string().optional(),
+  name: z.string().trim().min(1, 'Profile name is required'),
+  scheduleIds: z.array(z.string()).min(1, 'At least one schedule must be assigned'),
 })
 
 const step2Schema = z.object({
   zoneIds: z.array(z.string()).min(1, 'At least one zone must be assigned'),
 })
 
+type Step = 1 | 2 | 3
 type Step1FormValues = z.infer<typeof step1Schema>
 type Step2FormValues = z.infer<typeof step2Schema>
+type ProfileDraft = Step1FormValues & Step2FormValues
 
 interface Props {
   open: boolean
@@ -40,116 +53,152 @@ interface Props {
   current?: Profile | null
 }
 
-type Step = 1 | 2 | 3
+const emptyDraft: ProfileDraft = {
+  name: '',
+  scheduleIds: [],
+  zoneIds: [],
+}
+
+function toIdSet(values: string[]): Set<string> {
+  return new Set(values)
+}
 
 export default function AddProfileDialog({ open, onOpenChange, current }: Props) {
   const [currentStep, setCurrentStep] = useState<Step>(1)
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
+  const [schedules, setSchedules] = useState<Schedule[]>([])
   const [zones, setZones] = useState<Zone[]>([])
-  const [selectedZoneIds, setSelectedZoneIds] = useState<string[]>([])
-  const [scheduleSearchTerm, setScheduleSearchTerm] = useState<string>('')
-  const [profileData, setProfileData] = useState<Step1FormValues & Step2FormValues>({
-    name: '',
-    scheduleId: '',
-    zoneIds: [],
+  const [scheduleSearchTerm, setScheduleSearchTerm] = useState('')
+  const [profileData, setProfileData] = useState<ProfileDraft>(emptyDraft)
+
+  const step1Form = useForm<Step1FormValues>({
+    resolver: zodResolver(step1Schema),
+    defaultValues: {
+      name: '',
+      scheduleIds: [],
+    },
   })
 
-  const step1Form = useForm<Step1FormValues>({ 
-    resolver: zodResolver(step1Schema), 
-    defaultValues: { name: '', scheduleId: '' }
-  })
-
-  const step2Form = useForm<Step2FormValues>({ 
-    resolver: zodResolver(step2Schema), 
-    defaultValues: { zoneIds: [] }
+  const step2Form = useForm<Step2FormValues>({
+    resolver: zodResolver(step2Schema),
+    defaultValues: {
+      zoneIds: [],
+    },
   })
 
   useEffect(() => {
-    if (open) {
-      // Load calendar events and zones
-      const loadData = async () => {
-        try {
-          await loadZones()
-          setZones(getZones())
-        } catch (error) {
-          console.error('Failed to load zones:', error)
-        }
-      }
-      
-      loadData()
-      
-      // Subscribe to calendar events
-      const unsubscribe = subscribeCalendarEvents(setCalendarEvents)
-      
-      if (current) {
-        const initialData = {
-          name: current.name || '',
-          scheduleId: current.scheduleId || '',
-          zoneIds: current.zoneIds || [],
-        }
-        setProfileData(initialData)
-        step1Form.reset({ name: initialData.name, scheduleId: initialData.scheduleId })
-        setSelectedZoneIds(initialData.zoneIds)
-        step2Form.setValue('zoneIds', initialData.zoneIds)
-      } else {
-        // Reset for new profile
-        setProfileData({ name: '', scheduleId: '', zoneIds: [] })
-        step1Form.reset({ name: '', scheduleId: '' })
-        setSelectedZoneIds([])
-        step2Form.setValue('zoneIds', [])
-        setCurrentStep(1)
-      }
-      
-      return unsubscribe
+    if (!open) {
+      return
     }
-  }, [open, current])
 
-  const handleStep1Submit = (values: Step1FormValues) => {
-    setProfileData(prev => ({ ...prev, ...values }))
-    setCurrentStep(2)
-  }
+    const loadReferenceData = async () => {
+      try {
+        await Promise.all([loadSchedules(), loadZones()])
+        setSchedules(getSchedules())
+        setZones(getZones())
+      } catch (error) {
+        console.error('Failed to load profile dependencies:', error)
+      }
+    }
 
-  const handleStep2Submit = () => {
-    const values = { zoneIds: selectedZoneIds }
-    step2Form.setValue('zoneIds', values.zoneIds)
-    setProfileData(prev => ({ ...prev, ...values }))
-    setCurrentStep(3)
+    void loadReferenceData()
+  }, [open])
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    const initialData: ProfileDraft = current
+      ? {
+          name: current.name ?? '',
+          scheduleIds: current.scheduleIds ?? [],
+          zoneIds: current.zoneIds ?? [],
+        }
+      : emptyDraft
+
+    setProfileData(initialData)
+    step1Form.reset({
+      name: initialData.name,
+      scheduleIds: initialData.scheduleIds,
+    })
+    step2Form.reset({
+      zoneIds: initialData.zoneIds,
+    })
+    setScheduleSearchTerm('')
+    setCurrentStep(1)
+  }, [open, current, step1Form, step2Form])
+
+  const selectedScheduleIds = step1Form.watch('scheduleIds')
+  const selectedZoneIds = step2Form.watch('zoneIds')
+
+  const filteredSchedules = useMemo(() => {
+    const searchTerm = scheduleSearchTerm.trim().toLowerCase()
+    if (!searchTerm) {
+      return schedules
+    }
+
+    return schedules.filter((schedule) =>
+      schedule.name.toLowerCase().includes(searchTerm)
+    )
+  }, [scheduleSearchTerm, schedules])
+
+  const selectedSchedules = useMemo(() => {
+    const selectedIds = toIdSet(profileData.scheduleIds)
+    return schedules.filter((schedule) => selectedIds.has(schedule.id))
+  }, [profileData.scheduleIds, schedules])
+
+  const selectedZones = useMemo(() => {
+    const selectedIds = toIdSet(profileData.zoneIds)
+    return zones.filter((zone) => selectedIds.has(zone.id))
+  }, [profileData.zoneIds, zones])
+
+  const handleScheduleToggle = (scheduleId: string, checked: boolean) => {
+    const nextIds = checked
+      ? Array.from(new Set([...selectedScheduleIds, scheduleId]))
+      : selectedScheduleIds.filter((id) => id !== scheduleId)
+
+    step1Form.setValue('scheduleIds', nextIds, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
   }
 
   const handleZoneToggle = (zoneId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedZoneIds(prev => [...prev, zoneId])
-    } else {
-      setSelectedZoneIds(prev => prev.filter(id => id !== zoneId))
-    }
+    const nextIds = checked
+      ? Array.from(new Set([...selectedZoneIds, zoneId]))
+      : selectedZoneIds.filter((id) => id !== zoneId)
+
+    step2Form.setValue('zoneIds', nextIds, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+  }
+
+  const handleStep1Submit = (values: Step1FormValues) => {
+    setProfileData((previous) => ({ ...previous, ...values }))
+    setCurrentStep(2)
+  }
+
+  const handleStep2Submit = (values: Step2FormValues) => {
+    setProfileData((previous) => ({ ...previous, ...values }))
+    setCurrentStep(3)
   }
 
   const handleFinalSubmit = async () => {
-    try {
-      const profilePayload = {
-        name: profileData.name,
-        scheduleId: profileData.scheduleId ? parseInt(profileData.scheduleId) : undefined,
-        zoneIds: profileData.zoneIds.map(id => parseInt(id)),
-      }
+    const payload: Profile = {
+      ...(current ?? {}),
+      id: current?.id ?? String(Date.now()),
+      name: profileData.name,
+      scheduleIds: profileData.scheduleIds,
+      zoneIds: profileData.zoneIds,
+      createdAt: current?.createdAt ?? new Date().toISOString(),
+    }
 
+    try {
       if (current) {
-        const updated = { 
-          ...current, 
-          name: profileData.name,
-          scheduleId: profilePayload.scheduleId ? String(profilePayload.scheduleId) : undefined,
-          zoneIds: profileData.zoneIds
-        }
-        await updateProfile(updated)
+        await updateProfile(payload)
       } else {
-        // Create a proper Profile object for the API
-        const newProfile = {
-          id: String(Date.now()),
-          name: profileData.name,
-          scheduleId: profilePayload.scheduleId ? String(profilePayload.scheduleId) : undefined,
-          zoneIds: profileData.zoneIds,
-          createdAt: new Date().toISOString(),
-        } as Profile
-        await addProfile(newProfile)
+        await addProfile(payload)
       }
 
       onOpenChange(false)
@@ -158,121 +207,155 @@ export default function AddProfileDialog({ open, onOpenChange, current }: Props)
     }
   }
 
-  const resetDialog = () => {
-    setCurrentStep(1)
-    step1Form.reset()
-    step2Form.reset()
-    setSelectedZoneIds([])
-    setProfileData({ name: '', scheduleId: '', zoneIds: [] })
-  }
-
-  const handleClose = (open: boolean) => {
-    if (!open) {
-      resetDialog()
+  const handleClose = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setCurrentStep(1)
+      setProfileData(emptyDraft)
+      step1Form.reset({
+        name: '',
+        scheduleIds: [],
+      })
+      step2Form.reset({ zoneIds: [] })
+      setScheduleSearchTerm('')
     }
-    onOpenChange(open)
+
+    onOpenChange(nextOpen)
   }
 
   const getZoneTypeColor = (zoneType: string) => {
     const colors: Record<string, string> = {
-      'White': 'bg-gray-100 text-gray-800',
-      'Green': 'bg-green-100 text-green-800',
-      'Blue': 'bg-blue-100 text-blue-800',
-      'Orange': 'bg-orange-100 text-orange-800',
-      'Red': 'bg-red-100 text-red-800',
-      'Black': 'bg-black text-white',
+      White: 'bg-gray-100 text-gray-800',
+      Green: 'bg-green-100 text-green-800',
+      Blue: 'bg-blue-100 text-blue-800',
+      Orange: 'bg-orange-100 text-orange-800',
+      Red: 'bg-red-100 text-red-800',
+      Black: 'bg-black text-white',
     }
+
     return colors[zoneType] || 'bg-gray-100 text-gray-800'
   }
 
   const renderStep1 = () => (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       <div>
-        <h3 className="text-lg font-semibold">Basic Information</h3>
-        <p className="text-sm text-muted-foreground">Enter profile name and select a schedule</p>
+        <h3 className='text-lg font-semibold'>Basic Information</h3>
+        <p className='text-sm text-muted-foreground'>
+          Enter the profile name and assign one or more schedules.
+        </p>
       </div>
-      
+
       <Form {...step1Form}>
-        <form onSubmit={step1Form.handleSubmit(handleStep1Submit)} className="space-y-4">
-          <FormField control={step1Form.control} name="name" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Profile Name</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Full Access, After Hours Staff" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
+        <form
+          onSubmit={step1Form.handleSubmit(handleStep1Submit)}
+          className='space-y-5'
+        >
+          <FormField
+            control={step1Form.control}
+            name='name'
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Profile Name</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder='e.g., Full Access, After Hours Staff'
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          <FormField control={step1Form.control} name="scheduleId" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Schedule (Optional)</FormLabel>
-              <FormControl>
-                <div className="space-y-2">
-                  <div className="relative">
-                    <IconSearch className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search schedules..."
-                      value={scheduleSearchTerm}
-                      onChange={(e) => setScheduleSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <div className="border border-gray-300 rounded-md max-h-40 overflow-y-auto">
-                    {calendarEvents
-                      .filter(event => 
-                        event.title.toLowerCase().includes(scheduleSearchTerm.toLowerCase())
-                      )
-                      .map((event) => (
-                        <div
-                          key={event.id}
-                          className={`p-3 cursor-pointer hover:bg-gray-100 border-b last:border-b-0 ${
-                            field.value === event.id ? 'bg-blue-50 border-blue-200' : ''
-                          }`}
-                          onClick={() => {
-                            field.onChange(event.id)
-                            setScheduleSearchTerm('')
-                          }}
-                        >
-                          <div className="font-medium">{event.title}</div>
-                          <div className="text-sm text-gray-500">
-                            {event.start && event.end && (
-                              <>
-                                {format(new Date(event.start), 'HH:mm')} - {format(new Date(event.end), 'HH:mm')}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    {calendarEvents.length === 0 && (
-                      <div className="p-3 text-gray-500 text-center">
-                        No schedules available. Create events in the Schedules page first.
-                      </div>
-                    )}
-                    {calendarEvents.length > 0 && 
-                      calendarEvents.filter(event => 
-                        event.title.toLowerCase().includes(scheduleSearchTerm.toLowerCase())
-                      ).length === 0 && (
-                      <div className="p-3 text-gray-500 text-center">
-                        No schedules found matching "{scheduleSearchTerm}"
-                      </div>
-                    )}
-                  </div>
-                  {field.value && (
-                    <div className="text-sm text-blue-600">
-                      Selected: {calendarEvents.find(e => e.id === field.value)?.title}
+          <FormField
+            control={step1Form.control}
+            name='scheduleIds'
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Assign Schedule</FormLabel>
+                <FormControl>
+                  <div className='space-y-3'>
+                    <div className='relative'>
+                      <IconSearch className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
+                      <Input
+                        placeholder='Search schedules...'
+                        value={scheduleSearchTerm}
+                        onChange={(event) => setScheduleSearchTerm(event.target.value)}
+                        className='pl-10'
+                      />
                     </div>
-                  )}
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
 
-          <div className="flex justify-end">
-            <Button type="submit">
+                    <div className='rounded-md border'>
+                      <div className='max-h-56 space-y-1 overflow-y-auto p-2'>
+                        {filteredSchedules.map((schedule) => {
+                          const checked = field.value.includes(schedule.id)
+                          return (
+                            <label
+                              key={schedule.id}
+                              className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 transition ${
+                                checked
+                                  ? 'border-blue-200 bg-blue-50'
+                                  : 'border-transparent hover:bg-muted/50'
+                              }`}
+                            >
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(value) =>
+                                  handleScheduleToggle(schedule.id, Boolean(value))
+                                }
+                              />
+                              <div className='min-w-0 flex-1'>
+                                <div className='font-medium'>{schedule.name}</div>
+                                <div className='mt-1 flex items-center gap-1 text-xs text-muted-foreground'>
+                                  <IconClock size={12} />
+                                  {schedule.scheduleDays?.length ?? 0} configured day
+                                  {(schedule.scheduleDays?.length ?? 0) === 1 ? '' : 's'}
+                                </div>
+                              </div>
+                            </label>
+                          )
+                        })}
+
+                        {schedules.length === 0 && (
+                          <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
+                            No schedules available. Create at least one schedule first.
+                          </div>
+                        )}
+
+                        {schedules.length > 0 && filteredSchedules.length === 0 && (
+                          <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
+                            No schedules found matching "{scheduleSearchTerm}".
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {field.value.length > 0 && (
+                      <div className='flex flex-wrap gap-2'>
+                        {field.value.map((scheduleId) => {
+                          const schedule = schedules.find((item) => item.id === scheduleId)
+                          if (!schedule) {
+                            return null
+                          }
+
+                          return (
+                            <Badge key={schedule.id} variant='secondary'>
+                              {schedule.name}
+                            </Badge>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className='flex justify-end'>
+            <Button type='submit'>
               Next Step
-              <IconArrowRight size={16} className="ml-2" />
+              <IconArrowRight size={16} className='ml-2' />
             </Button>
           </div>
         </form>
@@ -281,232 +364,281 @@ export default function AddProfileDialog({ open, onOpenChange, current }: Props)
   )
 
   const renderStep2 = () => {
-    const availableZones = zones.filter(zone => !selectedZoneIds.includes(zone.id))
-    const assignedZones = zones.filter(zone => selectedZoneIds.includes(zone.id))
+    const selectedIds = toIdSet(selectedZoneIds)
+    const availableZones = zones.filter((zone) => !selectedIds.has(zone.id))
+    const assignedZones = zones.filter((zone) => selectedIds.has(zone.id))
 
     return (
-      <div className="space-y-6">
+      <div className='space-y-6'>
         <div>
-          <h3 className="text-lg font-semibold">Zone Assignment</h3>
-          <p className="text-sm text-muted-foreground">Select zones that this profile should have access to</p>
+          <h3 className='text-lg font-semibold'>Zone Assignment</h3>
+          <p className='text-sm text-muted-foreground'>
+            Select one or more zones that this profile should be able to access.
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
-          {/* Available Zones */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Available Zones</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 max-h-64 overflow-y-auto">
-              {availableZones.length === 0 ? (
-                <p className="text-sm text-muted-foreground">All zones assigned</p>
-              ) : (
-                availableZones.map((zone) => (
-                  <div key={zone.id} className="flex items-center space-x-2 p-2 border rounded">
-                    <Checkbox
-                      id={`available-${zone.id}`}
-                      checked={false}
-                      onCheckedChange={(checked) => handleZoneToggle(zone.id, checked as boolean)}
-                    />
-                    <label 
-                      htmlFor={`available-${zone.id}`} 
-                      className="flex-1 cursor-pointer text-sm"
-                    >
-                      <div className="font-medium">{zone.name}</div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <IconMapPin size={12} />
-                        {zone.location}
-                        {zone.zoneType && (
-                          <Badge className={`text-xs ${getZoneTypeColor(zone.zoneType.name || '')}`}>
-                            {zone.zoneType.name} (Lvl {zone.zoneType.level})
-                          </Badge>
-                        )}
-                      </div>
-                    </label>
-                  </div>
-                ))
+        <Form {...step2Form}>
+          <form
+            onSubmit={step2Form.handleSubmit(handleStep2Submit)}
+            className='space-y-6'
+          >
+            <FormField
+              control={step2Form.control}
+              name='zoneIds'
+              render={() => (
+                <FormItem>
+                  <FormControl>
+                    <div className='grid gap-6 md:grid-cols-2'>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className='text-base'>Available Zones</CardTitle>
+                        </CardHeader>
+                        <CardContent className='max-h-72 space-y-2 overflow-y-auto'>
+                          {availableZones.length === 0 ? (
+                            <p className='text-sm text-muted-foreground'>
+                              All available zones are already assigned.
+                            </p>
+                          ) : (
+                            availableZones.map((zone) => (
+                              <label
+                                key={zone.id}
+                                className='flex cursor-pointer items-start gap-3 rounded border p-3 transition hover:bg-muted/50'
+                              >
+                                <Checkbox
+                                  checked={false}
+                                  onCheckedChange={(value) =>
+                                    handleZoneToggle(zone.id, Boolean(value))
+                                  }
+                                />
+                                <div className='min-w-0 flex-1'>
+                                  <div className='font-medium'>{zone.name}</div>
+                                  <div className='mt-1 flex items-center gap-2 text-xs text-muted-foreground'>
+                                    <IconMapPin size={12} />
+                                    <span>{zone.location || 'No location specified'}</span>
+                                    {zone.zoneType && (
+                                      <Badge
+                                        className={`text-xs ${getZoneTypeColor(
+                                          zone.zoneType.name || ''
+                                        )}`}
+                                      >
+                                        {zone.zoneType.name} (Lvl {zone.zoneType.level})
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </label>
+                            ))
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className='text-base'>Assigned Zones</CardTitle>
+                        </CardHeader>
+                        <CardContent className='max-h-72 space-y-2 overflow-y-auto'>
+                          {assignedZones.length === 0 ? (
+                            <p className='text-sm text-muted-foreground'>
+                              No zones assigned yet.
+                            </p>
+                          ) : (
+                            assignedZones.map((zone) => (
+                              <label
+                                key={zone.id}
+                                className='flex cursor-pointer items-start gap-3 rounded border border-blue-200 bg-blue-50 p-3'
+                              >
+                                <Checkbox
+                                  checked
+                                  onCheckedChange={(value) =>
+                                    handleZoneToggle(zone.id, Boolean(value))
+                                  }
+                                />
+                                <div className='min-w-0 flex-1'>
+                                  <div className='font-medium'>{zone.name}</div>
+                                  <div className='mt-1 flex items-center gap-2 text-xs text-muted-foreground'>
+                                    <IconMapPin size={12} />
+                                    <span>{zone.location || 'No location specified'}</span>
+                                    {zone.zoneType && (
+                                      <Badge
+                                        className={`text-xs ${getZoneTypeColor(
+                                          zone.zoneType.name || ''
+                                        )}`}
+                                      >
+                                        {zone.zoneType.name} (Lvl {zone.zoneType.level})
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </label>
+                            ))
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </CardContent>
-          </Card>
+            />
 
-          {/* Assigned Zones */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Assigned Zones</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 max-h-64 overflow-y-auto">
-              {assignedZones.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No zones assigned</p>
-              ) : (
-                assignedZones.map((zone) => (
-                  <div key={zone.id} className="flex items-center space-x-2 p-2 border rounded bg-blue-50">
-                    <Checkbox
-                      id={`assigned-${zone.id}`}
-                      checked={true}
-                      onCheckedChange={(checked) => handleZoneToggle(zone.id, checked as boolean)}
-                    />
-                    <label 
-                      htmlFor={`assigned-${zone.id}`} 
-                      className="flex-1 cursor-pointer text-sm"
-                    >
-                      <div className="font-medium">{zone.name}</div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <IconMapPin size={12} />
-                        {zone.location}
-                        {zone.zoneType && (
-                          <Badge className={`text-xs ${getZoneTypeColor(zone.zoneType.name || '')}`}>
-                            {zone.zoneType.name} (Lvl {zone.zoneType.level})
-                          </Badge>
-                        )}
-                      </div>
-                    </label>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex justify-between">
-          <Button variant="outline" onClick={() => setCurrentStep(1)}>
-            <IconArrowLeft size={16} className="mr-2" />
-            Previous
-          </Button>
-          <Button onClick={handleStep2Submit} disabled={selectedZoneIds.length === 0}>
-            Review Profile
-            <IconArrowRight size={16} className="ml-2" />
-          </Button>
-        </div>
+            <div className='flex justify-between'>
+              <Button type='button' variant='outline' onClick={() => setCurrentStep(1)}>
+                <IconArrowLeft size={16} className='mr-2' />
+                Previous
+              </Button>
+              <Button type='submit'>
+                Review Profile
+                <IconArrowRight size={16} className='ml-2' />
+              </Button>
+            </div>
+          </form>
+        </Form>
       </div>
     )
   }
 
-  const renderStep3 = () => {
-    const selectedSchedule = calendarEvents.find(e => e.id === profileData.scheduleId)
-    const selectedZones = zones.filter(zone => selectedZoneIds.includes(zone.id))
+  const renderStep3 = () => (
+    <div className='space-y-6'>
+      <div>
+        <h3 className='text-lg font-semibold'>Profile Summary</h3>
+        <p className='text-sm text-muted-foreground'>
+          Review the profile details before saving.
+        </p>
+      </div>
 
-    return (
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-semibold">Profile Summary</h3>
-          <p className="text-sm text-muted-foreground">Review the profile details before saving</p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <IconCheck className="text-green-600" size={20} />
-              {profileData.name}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-medium mb-2">Schedule</h4>
-              {selectedSchedule ? (
-                <div className="flex items-center gap-2 text-sm">
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2 text-base'>
+            <IconCheck className='text-green-600' size={20} />
+            {profileData.name}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='space-y-6'>
+          <div>
+            <h4 className='mb-2 font-medium'>
+              Schedules ({selectedSchedules.length})
+            </h4>
+            <div className='space-y-2'>
+              {selectedSchedules.map((schedule) => (
+                <div
+                  key={schedule.id}
+                  className='flex items-center gap-2 rounded bg-gray-50 p-2 text-sm'
+                >
                   <IconClock size={16} />
                   <div>
-                    <div className="font-medium">{selectedSchedule.title}</div>
-                    {selectedSchedule.start && selectedSchedule.end && (
-                      <div className="text-xs text-muted-foreground">
-                        {format(new Date(selectedSchedule.start), 'HH:mm')} - {format(new Date(selectedSchedule.end), 'HH:mm')}
-                      </div>
-                    )}
+                    <div className='font-medium'>{schedule.name}</div>
+                    <div className='text-xs text-muted-foreground'>
+                      {schedule.scheduleDays?.length ?? 0} configured day
+                      {(schedule.scheduleDays?.length ?? 0) === 1 ? '' : 's'}
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No schedule assigned</p>
-              )}
+              ))}
             </div>
+          </div>
 
-            <div>
-              <h4 className="font-medium mb-2">Zone Access ({selectedZones.length} zones)</h4>
-              <div className="space-y-2">
-                {selectedZones.map((zone) => (
-                  <div key={zone.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div>
-                      <div className="font-medium text-sm">{zone.name}</div>
-                      <div className="text-xs text-muted-foreground">{zone.location}</div>
+          <div>
+            <h4 className='mb-2 font-medium'>Zone Access ({selectedZones.length})</h4>
+            <div className='space-y-2'>
+              {selectedZones.map((zone) => (
+                <div
+                  key={zone.id}
+                  className='flex items-center justify-between rounded bg-gray-50 p-2'
+                >
+                  <div>
+                    <div className='text-sm font-medium'>{zone.name}</div>
+                    <div className='text-xs text-muted-foreground'>
+                      {zone.location || 'No location specified'}
                     </div>
-                    {zone.zoneType && (
-                      <Badge className={`text-xs ${getZoneTypeColor(zone.zoneType.name || '')}`}>
-                        {zone.zoneType.name}
-                      </Badge>
-                    )}
                   </div>
-                ))}
-              </div>
+                  {zone.zoneType && (
+                    <Badge
+                      className={`text-xs ${getZoneTypeColor(zone.zoneType.name || '')}`}
+                    >
+                      {zone.zoneType.name}
+                    </Badge>
+                  )}
+                </div>
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="flex justify-between">
-          <Button variant="outline" onClick={() => setCurrentStep(2)}>
-            <IconArrowLeft size={16} className="mr-2" />
-            Previous
-          </Button>
-          <Button onClick={handleFinalSubmit}>
-            <IconCheck size={16} className="mr-2" />
-            {current ? 'Update Profile' : 'Create Profile'}
-          </Button>
-        </div>
+      <div className='flex justify-between'>
+        <Button type='button' variant='outline' onClick={() => setCurrentStep(2)}>
+          <IconArrowLeft size={16} className='mr-2' />
+          Previous
+        </Button>
+        <Button onClick={handleFinalSubmit}>
+          <IconCheck size={16} className='mr-2' />
+          {current ? 'Update Profile' : 'Create Profile'}
+        </Button>
       </div>
-    )
-  }
+    </div>
+  )
 
   const getStepTitle = () => {
     switch (currentStep) {
-      case 1: return 'Create Profile - Step 1: Basic Info'
-      case 2: return 'Create Profile - Step 2: Zone Assignment'
-      case 3: return 'Create Profile - Step 3: Review & Save'
-      default: return 'Create Profile'
+      case 1:
+        return current ? 'Edit Profile - Step 1: Basic Info' : 'Create Profile - Step 1: Basic Info'
+      case 2:
+        return current ? 'Edit Profile - Step 2: Zone Assignment' : 'Create Profile - Step 2: Zone Assignment'
+      case 3:
+        return current ? 'Edit Profile - Step 3: Review & Save' : 'Create Profile - Step 3: Review & Save'
+      default:
+        return current ? 'Edit Profile' : 'Create Profile'
     }
   }
 
   const getStepDescription = () => {
     switch (currentStep) {
-      case 1: return 'Enter profile name and select schedule'
-      case 2: return 'Assign zones to this profile'
-      case 3: return 'Review profile details before saving'
-      default: return ''
+      case 1:
+        return 'Enter profile name and assign schedules'
+      case 2:
+        return 'Assign zones to this profile'
+      case 3:
+        return 'Review profile details before saving'
+      default:
+        return ''
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className='sm:max-w-4xl max-h-[80vh] overflow-y-auto'>
+      <DialogContent className='max-h-[80vh] overflow-y-auto sm:max-w-4xl'>
         <DialogHeader>
           <DialogTitle>{getStepTitle()}</DialogTitle>
           <DialogDescription>{getStepDescription()}</DialogDescription>
         </DialogHeader>
 
-        {/* Progress indicator */}
-        <div className="flex items-center justify-center space-x-2 py-4">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-            currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-          }`}>
+        <div className='flex items-center justify-center space-x-2 py-4'>
+          <div
+            className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+              currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+            }`}
+          >
             1
           </div>
-          <div className={`w-12 h-1 ${
-            currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'
-          }`} />
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-            currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-          }`}>
+          <div className={`h-1 w-12 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`} />
+          <div
+            className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+              currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+            }`}
+          >
             2
           </div>
-          <div className={`w-12 h-1 ${
-            currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-200'
-          }`} />
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-            currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-          }`}>
+          <div className={`h-1 w-12 ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`} />
+          <div
+            className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+              currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+            }`}
+          >
             3
           </div>
         </div>
 
-        {/* Step content */}
-        <div className="py-4">
+        <div className='py-4'>
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}

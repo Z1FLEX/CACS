@@ -23,15 +23,20 @@ public class Profile {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "schedule_id")
-    private Schedule schedule;
-
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
     @Column(name = "created_at")
     private Instant createdAt;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "profile_schedule",
+        joinColumns = @JoinColumn(name = "profile_id"),
+        inverseJoinColumns = @JoinColumn(name = "schedule_id")
+    )
+    @Builder.Default
+    private Set<Schedule> schedules = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

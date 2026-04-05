@@ -6,7 +6,6 @@ import com.hsware.cacs.dto.ProfileUpdateDTO;
 import com.hsware.cacs.entity.Profile;
 import com.hsware.cacs.mapper.DtoMapper;
 import com.hsware.cacs.repository.ProfileRepository;
-import com.hsware.cacs.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +19,6 @@ import java.util.stream.Collectors;
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
-    private final ScheduleRepository scheduleRepository;
     private final DtoMapper dtoMapper;
 
     @Transactional(readOnly = true)

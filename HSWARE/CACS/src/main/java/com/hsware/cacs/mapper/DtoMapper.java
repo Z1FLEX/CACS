@@ -5,6 +5,7 @@ import com.hsware.cacs.entity.*;
 import com.hsware.cacs.repository.AccessCardRepository;
 import com.hsware.cacs.repository.DoorRepository;
 import com.hsware.cacs.repository.ProfileRepository;
+import com.hsware.cacs.repository.ScheduleRepository;
 import com.hsware.cacs.repository.UserRepository;
 import com.hsware.cacs.repository.ZoneRepository;
 import com.hsware.cacs.repository.ZoneTypeRepository;
@@ -28,6 +29,7 @@ public class DtoMapper {
     private final ZoneTypeRepository zoneTypeRepository;
     private final DoorRepository doorRepository;
     private final UserRepository userRepository;
+    private final ScheduleRepository scheduleRepository;
 
     public UserDTO toUserDTO(User user) {
         if (user == null) return null;
@@ -156,6 +158,10 @@ public class DtoMapper {
     public ProfileDTO toProfileDTO(Profile profile) {
         if (profile == null) return null;
         
+        Set<Integer> scheduleIds = profile.getSchedules().stream()
+            .map(Schedule::getId)
+            .collect(Collectors.toSet());
+
         Set<Integer> zoneIds = profile.getZones().stream()
             .map(Zone::getId)
             .collect(Collectors.toSet());
@@ -163,7 +169,7 @@ public class DtoMapper {
         return new ProfileDTO(
             profile.getId(),
             nullToEmpty(profile.getName()),
-            profile.getSchedule() != null ? profile.getSchedule().getId() : null,
+            scheduleIds,
             zoneIds,
             "",
             0,
@@ -176,6 +182,14 @@ public class DtoMapper {
         
         Profile profile = new Profile();
         profile.setName(dto.getName());
+
+        if (dto.getScheduleIds() != null) {
+            Set<Schedule> schedules = dto.getScheduleIds().stream()
+                .map(scheduleId -> scheduleRepository.findById(scheduleId).orElse(null))
+                .filter(schedule -> schedule != null)
+                .collect(Collectors.toSet());
+            profile.setSchedules(schedules);
+        }
         
         if (dto.getZoneIds() != null) {
             Set<Zone> zones = dto.getZoneIds().stream()
@@ -192,6 +206,13 @@ public class DtoMapper {
         if (dto == null || profile == null) return;
         
         if (dto.getName() != null) profile.setName(dto.getName());
+        if (dto.getScheduleIds() != null) {
+            Set<Schedule> schedules = dto.getScheduleIds().stream()
+                .map(scheduleId -> scheduleRepository.findById(scheduleId).orElse(null))
+                .filter(schedule -> schedule != null)
+                .collect(Collectors.toSet());
+            profile.setSchedules(schedules);
+        }
         if (dto.getZoneIds() != null) {
             Set<Zone> zones = dto.getZoneIds().stream()
                 .map(zoneId -> zoneRepository.findById(zoneId).orElse(null))

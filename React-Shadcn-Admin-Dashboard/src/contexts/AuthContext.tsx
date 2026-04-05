@@ -10,8 +10,8 @@ interface User {
 interface AuthContextType {
   user: User | null
   setUser: (user: User | null) => void
-  pendingUser: { email: string; role: string } | null
-  setPendingUser: (user: { email: string; role: string } | null) => void
+  pendingUser: User | null
+  setPendingUser: (user: User | null) => void
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   isLoading: boolean
@@ -22,7 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [pendingUser, setPendingUser] = useState<{ email: string; role: string } | null>(null)
+  const [pendingUser, setPendingUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   // Check for existing tokens on mount and validate them
@@ -71,8 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Set user
       setUser(response.user)
       
-      // Set pending user for OTP if needed (you can remove this if not using 2FA)
-      setPendingUser({ email: response.user.email, role: response.user.role })
+      // Set pending user for OTP if needed
+      setPendingUser(response.user)
     } catch (error: any) {
       console.error('Login failed:', error)
       throw new Error(error.response?.data?.message || 'Login failed')

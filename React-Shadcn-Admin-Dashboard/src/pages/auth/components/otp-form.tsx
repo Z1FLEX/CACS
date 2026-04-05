@@ -95,7 +95,7 @@ export function OtpForm({ className, ...props }: OtpFormProps) {
                       onComplete={() => setDisabledBtn(false)}
                       onIncomplete={() => setDisabledBtn(true)}
                     >
-                      {Array.from({ length: 7 }, (_, i) => {
+                      {Array.from({ length: 6 }, (_, i) => {
                         if (i === 3)
                           return <Separator key={i} orientation='vertical' />
                         return (

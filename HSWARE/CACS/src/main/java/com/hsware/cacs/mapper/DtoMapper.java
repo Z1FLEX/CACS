@@ -415,4 +415,39 @@ public class DtoMapper {
         
         if (dto.getName() != null) schedule.setName(dto.getName());
     }
+
+    public TimeSlotDTO toTimeSlotDTO(DayTimeSlot timeSlot) {
+        if (timeSlot == null) return null;
+        
+        return new TimeSlotDTO(
+            timeSlot.getId(),
+            timeSlot.getScheduleDay().getId(),
+            timeSlot.getScheduleDay().getDayIndex(),
+            timeSlot.getStartTime().toString(),
+            timeSlot.getEndTime().toString(),
+            null // Time slots don't have separate created at
+        );
+    }
+
+    public DayTimeSlot toTimeSlot(TimeSlotCreateDTO dto, ScheduleDay scheduleDay) {
+        if (dto == null) return null;
+        
+        DayTimeSlot timeSlot = new DayTimeSlot();
+        timeSlot.setScheduleDay(scheduleDay);
+        timeSlot.setStartTime(java.time.LocalTime.parse(dto.getStartTime()));
+        timeSlot.setEndTime(java.time.LocalTime.parse(dto.getEndTime()));
+        
+        return timeSlot;
+    }
+
+    public void updateTimeSlotFromDTO(TimeSlotUpdateDTO dto, DayTimeSlot timeSlot) {
+        if (dto == null || timeSlot == null) return;
+        
+        if (dto.getStartTime() != null) {
+            timeSlot.setStartTime(java.time.LocalTime.parse(dto.getStartTime()));
+        }
+        if (dto.getEndTime() != null) {
+            timeSlot.setEndTime(java.time.LocalTime.parse(dto.getEndTime()));
+        }
+    }
 }

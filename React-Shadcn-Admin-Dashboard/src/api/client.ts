@@ -1,14 +1,14 @@
 /**
  * API client for backend CRUD. Use this in services when you switch from store to API.
- * Set VITE_API_BASE_URL in .env to point to your backend (e.g. http://localhost:8080/api).
+ * Set VITE_API_BASE_URL in .env to point to your backend host (e.g. http://localhost:8080).
  */
 import axios from 'axios'
 
-const baseURL =
+const baseURL = (
   typeof import.meta.env.VITE_API_BASE_URL === 'string' && import.meta.env.VITE_API_BASE_URL.trim() !== ''
     ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/$/, '')
     : ''
-
+).replace(/\/api$/, '')
 export const api = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },

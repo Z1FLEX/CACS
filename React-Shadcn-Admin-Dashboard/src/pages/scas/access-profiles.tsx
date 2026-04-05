@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge'
 import { IconPlus, IconClock, IconMapPin } from '@tabler/icons-react'
 import { getProfiles, subscribeProfiles, loadProfiles, removeProfile, loadSchedules, loadZones, getSchedules, getZones } from '@/services'
 import AddProfileDialog from './components/add-profile-dialog'
-import type { Profile, Schedule, Zone } from '@/types/scas'
 
 export default function AccessProfilesPage() {
   const [profiles, setProfiles] = useState(() => getProfiles())

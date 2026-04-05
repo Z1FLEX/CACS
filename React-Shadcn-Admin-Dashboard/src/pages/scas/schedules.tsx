@@ -3,75 +3,177 @@ import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { EventClickArg } from '@fullcalendar/core'
+import { DateClickArg } from '@fullcalendar/interaction'
 import { Input } from "@/components/ui/input"
 import { Trash2, X } from 'lucide-react'
 import { addMinutes, format } from "date-fns"
 import { Button } from '@/components/custom/button'
 import { toast } from '@/components/ui/use-toast'
 import { CalendarEvent } from './data/schema'
-import { getCalendarEvents, setCalendarEvents, subscribeCalendarEvents } from '@/data/calendar-events-store'
+import { 
+  loadCalendarEvents, 
+  addCalendarEvent, 
+  updateCalendarEvent, 
+  removeCalendarEvent, 
+  subscribeCalendarEvents
+} from '@/data/calendar-events-store'
+import { scheduleAPI, ScheduleDTO } from '@/services/schedule-api'
 
 export default function SchedulesPage() {
   const calendarRef = useRef<FullCalendar>(null)
-  const [events, setEvents] = useState<CalendarEvent[]>(() => getCalendarEvents());
+  const [events, setEvents] = useState<CalendarEvent[]>([])
   const [currentEvent, setCurrentEvent] = useState<CalendarEvent | null>(null)
   const [isEventModalOpen, setIsEventModalOpen] = useState<boolean>(false)
+  const [schedules, setSchedules] = useState<ScheduleDTO[]>([])
+  const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null)
+  const selectedSchedule = schedules.find(schedule => schedule.id === selectedScheduleId) || null
+  const selectedScheduleName = selectedSchedule?.name || ''
 
   useEffect(() => {
+    const initializeData = async () => {
+      try {
+        // Load schedules
+        const schedulesData = await scheduleAPI.getSchedules()
+        setSchedules(schedulesData)
+        
+        // Select first schedule by default if available
+        if (schedulesData.length > 0) {
+          const firstSchedule = schedulesData[0]
+          setSelectedScheduleId(firstSchedule.id)
+          await loadCalendarEvents(firstSchedule.id)
+        } else {
+          await loadCalendarEvents()
+        }
+      } catch (error) {
+        console.error('Failed to initialize data:', error)
+        toast({
+          title: "Error loading schedules",
+          description: "Please check your connection and try again.",
+          variant: "destructive"
+        })
+      }
+    }
+    
+    initializeData()
+    
     const unsubscribe = subscribeCalendarEvents(setEvents)
     return unsubscribe
   }, [])
 
   const handleEventClick = (clickInfo: EventClickArg) => {
     const event = clickInfo.event
+    const dayIndexFromStart = event.start ? (event.start.getDay() === 0 ? 7 : event.start.getDay()) : undefined
     setCurrentEvent({
       id: event.id,
       title: event.title,
       start: event.start || new Date(),
       end: event.end || new Date(),
+      dayIndex: (event.extendedProps.dayIndex as number | undefined) ?? dayIndexFromStart,
+      scheduleId: event.extendedProps.scheduleId as number | undefined,
+      timeSlotId: event.extendedProps.timeSlotId as number | undefined,
     })
     setIsEventModalOpen(true)
   }
 
-  const handleDateClick = (arg: any) => {
+  const handleDateClick = (arg: DateClickArg) => {
     const endTime = addMinutes(arg.date, 60)
+    const dayIndex = arg.date.getDay() === 0 ? 7 : arg.date.getDay() // Convert Sunday to 7
+    
     setCurrentEvent({
       id: '',
       title: '',
       start: arg.date,
       end: endTime,
+      dayIndex: dayIndex,
     })
     setIsEventModalOpen(true)
   }
 
-  const handleSaveEvent = () => {
-    if (!currentEvent) return
-
-    const updatedEvent = currentEvent.id
-      ? currentEvent
-      : { ...currentEvent, id: Date.now().toString() }
+  const handleAddEvent = () => {
+    const now = new Date()
+    const endTime = addMinutes(now, 60)
     
-    setCalendarEvents(currentEvent.id 
-      ? [...events].map(e => e.id === currentEvent.id ? currentEvent : e)
-      : [...events, updatedEvent]
-    )
+    setCurrentEvent({
+      id: '',
+      title: '',
+      start: now,
+      end: endTime,
+      dayIndex: undefined, // Will be set by user in modal
+    })
+    setIsEventModalOpen(true)
+  }
+
+const handleSaveEvent = async () => {
+  if (!currentEvent) return
+
+  if (!selectedScheduleId) {
+    toast({
+      title: "No schedule selected",
+      description: "Please select a schedule first.",
+      variant: "destructive"
+    })
+    return
+  }
+
+  if (new Date(currentEvent.end) <= new Date(currentEvent.start)) {
+    toast({
+      title: "Invalid time range",
+      description: "End time must be after start time.",
+      variant: "destructive"
+    })
+    return
+  }
+
+  const eventToSave: CalendarEvent = {
+    ...currentEvent,
+    title: currentEvent.title.trim() || selectedScheduleName || 'Event',
+    scheduleId: currentEvent.scheduleId ?? selectedScheduleId,
+  }
+
+  try {
+    if (eventToSave.id) {
+      // Update existing event
+      await updateCalendarEvent(eventToSave)
+      toast({
+        title: "Event updated successfully!",
+      })
+    } else {
+      // Create new event
+      await addCalendarEvent(eventToSave, selectedScheduleId)
+      toast({
+        title: "Event created successfully!",
+      })
+    }
 
     setIsEventModalOpen(false)
     setCurrentEvent(null)
+  } catch (error) {
+    console.error('Failed to save event:', error)
     toast({
-      title: "Event saved successfully!",
+      title: "Error saving event",
+      description: "Please try again.",
+      variant: "destructive"
     })
   }
+}
 
-  const handleDeleteEvent = () => {
+  const handleDeleteEvent = async () => {
     if (currentEvent && currentEvent.id) {
-      const updatedEvents = events.filter(e => e.id !== currentEvent.id)
-      setCalendarEvents(updatedEvents)
-      setIsEventModalOpen(false)
-      setCurrentEvent(null)
-      toast({
-        title: "Event deleted successfully!",
-      })
+      try {
+        await removeCalendarEvent(currentEvent.id)
+        setIsEventModalOpen(false)
+        setCurrentEvent(null)
+        toast({
+          title: "Event deleted successfully!",
+        })
+      } catch (error) {
+        console.error('Failed to delete event:', error)
+        toast({
+          title: "Error deleting event",
+          description: "Please try again.",
+          variant: "destructive"
+        })
+      }
     }
   }
 
@@ -103,7 +205,7 @@ export default function SchedulesPage() {
               <h2 className="text-2xl font-bold tracking-tight">Weekly Schedule</h2>
             </div>
             <div className="space-x-2 flex items-center">
-              <Button variant='outline' onClick={() => handleDateClick({ date: new Date() } as any)}>+ Add Event</Button>
+              <Button variant='outline' onClick={handleAddEvent}>+ Add Event</Button>
             </div>
           </div>
           <FullCalendar
@@ -137,44 +239,75 @@ export default function SchedulesPage() {
               <h3 className="text-lg font-semibold">{currentEvent.id ? 'Edit Event' : 'Add Event'}</h3>
               <Button variant="ghost" onClick={() => setIsEventModalOpen(false)}><X /></Button>
             </div>
-            <Input
-              className="mb-4"
-              placeholder="Event Title"
-              value={currentEvent.title}
-              onChange={(e) => setCurrentEvent({ ...currentEvent, title: e.target.value })}
-            />
-            <Input
-              className="mb-4"
-              placeholder="Start Time"
-              type="time"
-              value={format(new Date(currentEvent.start), "HH:mm")}
-              onChange={(e) => {
-                const [hours, minutes] = e.target.value.split(':')
-                const newStart = new Date(currentEvent.start)
-                newStart.setHours(parseInt(hours), parseInt(minutes))
-                setCurrentEvent({ ...currentEvent, start: newStart })
-              }}
-            />
-            <Input
-              className="mb-4"
-              placeholder="End Time"
-              type="time"
-              value={format(new Date(currentEvent.end), "HH:mm")}
-              onChange={(e) => {
-                const [hours, minutes] = e.target.value.split(':')
-                const newEnd = new Date(currentEvent.end)
-                newEnd.setHours(parseInt(hours), parseInt(minutes))
-                setCurrentEvent({ ...currentEvent, end: newEnd })
-              }}
-            />
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Event Name</label>
+              <Input
+                placeholder="Event name"
+                value={currentEvent.title}
+                onChange={(e) => setCurrentEvent({ ...currentEvent, title: e.target.value })}
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Day</label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={currentEvent.dayIndex || ''}
+                onChange={(e) => setCurrentEvent({ ...currentEvent, dayIndex: parseInt(e.target.value) || undefined })}
+              >
+                <option value="">Select a day</option>
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="7">Sunday</option>
+              </select>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Start Time</label>
+              <Input
+                placeholder="Start Time"
+                type="time"
+                value={format(new Date(currentEvent.start), "HH:mm")}
+                onChange={(e) => {
+                  if (!e.target.value) return
+                  const [hours, minutes] = e.target.value.split(':')
+                  const newStart = new Date(currentEvent.start)
+                  newStart.setHours(parseInt(hours), parseInt(minutes))
+                  setCurrentEvent({ ...currentEvent, start: newStart })
+                }}
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">End Time</label>
+              <Input
+                placeholder="End Time"
+                type="time"
+                value={format(new Date(currentEvent.end), "HH:mm")}
+                onChange={(e) => {
+                  if (!e.target.value) return
+                  const [hours, minutes] = e.target.value.split(':')
+                  const newEnd = new Date(currentEvent.end)
+                  newEnd.setHours(parseInt(hours), parseInt(minutes))
+                  setCurrentEvent({ ...currentEvent, end: newEnd })
+                }}
+              />
+            </div>
             <div className="flex justify-between space-x-2">
-              <Button onClick={handleDeleteEvent} variant="destructive">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
+              {currentEvent.id ? (
+                <Button onClick={handleDeleteEvent} variant="destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              ) : (
+                <div />
+              )}
               <div>
                 <Button onClick={() => setIsEventModalOpen(false)} variant="outline" className="mr-2">Cancel</Button>
-                <Button onClick={handleSaveEvent}>Save</Button>
+                <Button onClick={handleSaveEvent} disabled={!currentEvent.dayIndex || !currentEvent.title.trim()}>Save</Button>
               </div>
             </div>
           </div>

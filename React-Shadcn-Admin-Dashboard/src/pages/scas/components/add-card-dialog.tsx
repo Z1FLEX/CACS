@@ -56,13 +56,10 @@ export default function AddCardDialog({ open, onOpenChange, current }: Props) {
       }
       await updateAccessCard(updated)
     } else {
-      const id = String(Date.now())
-      const newCard: AccessCard = {
-        id,
+      const newCard: Partial<AccessCard> = {
         cardNumber: vals.cardNumber,
         uid: vals.cardNumber,
         status: (vals.status as AccessCard['status']) || 'ACTIVE',
-        issueDate: new Date().toISOString().split('T')[0],
       }
 
       await addAccessCard(newCard)

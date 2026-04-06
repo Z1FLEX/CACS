@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-wrapper'
 import { EmptyState } from '@/components/custom/empty-state'
+import { formatDateTime } from '@/lib/date-time'
 import type { AccessCard } from '@/types/scas'
 import { subscribeAccessCards, getAccessCards, loadAccessCards, removeAccessCard } from '@/services'
 import AddCardDialog from './components/add-card-dialog'
@@ -150,7 +151,7 @@ export default function AccessCardsPage() {
                             )}
                             {!['status', 'cardNumber', 'userName', 'actions'].includes(col.key) && (
                               <>
-                                {col.key === 'issueDate' && card.issueDate}
+                                {col.key === 'issueDate' && formatDateTime(card.issueDate)}
                               </>
                             )}
                           </TableCell>

@@ -17,12 +17,19 @@ import {
 export type AccessCardSubscriber = (cards: AccessCard[]) => void
 
 function normalizeCard(c: any): AccessCard {
+  const issueDate =
+    (typeof c.issueDate === 'string' && c.issueDate.trim() !== '' && c.issueDate) ||
+    (typeof c.createdAt === 'string' && c.createdAt.trim() !== '' && c.createdAt) ||
+    (typeof c.created_at === 'string' && c.created_at.trim() !== '' && c.created_at) ||
+    new Date().toISOString()
+
   return {
     ...c,
     id: String(c.id),
     cardNumber: c.cardNumber ?? c.uid ?? '',
     userId: c.userId != null ? String(c.userId) : undefined,
     status: (c.status || 'ACTIVE').toUpperCase(),
+    issueDate,
   }
 }
 
@@ -40,8 +47,16 @@ export function subscribeAccessCards(cb: AccessCardSubscriber): () => void {
   return storeSubscribeCards(cb)
 }
 
-export async function addAccessCard(card: AccessCard): Promise<void> {
-  await apiCreateAccessCard(card)
+function cardToCreateBody(card: Partial<AccessCard>): Record<string, unknown> {
+  return {
+    uid: card.uid || card.cardNumber,
+    num: card.cardNumber,
+    status: card.status,
+  }
+}
+
+export async function addAccessCard(card: Partial<AccessCard>): Promise<void> {
+  await apiCreateAccessCard(cardToCreateBody(card))
   await loadAccessCards()
 }
 

@@ -159,7 +159,7 @@ export default function UserDetailsDialog({ open, onOpenChange, user }: Props) {
                         </div>
                         {userCard.issueDate && (
                           <div className='text-sm text-muted-foreground'>
-                            Issued: {userCard.issueDate}
+                            Issued: {formatDateTime(userCard.issueDate)}
                           </div>
                         )}
                       </div>

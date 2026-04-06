@@ -11,6 +11,7 @@ import { Button } from '@/components/custom/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { formatDateTime } from '@/lib/date-time'
 import type { AccessCard } from '@/types/scas'
 import { IconSearch, IconCreditCard } from '@tabler/icons-react'
 
@@ -122,7 +123,7 @@ export default function FindCardDialog({ open, onOpenChange, cards, onCardSelect
                             </Badge>
                             {card.issueDate && (
                               <span className='text-xs text-muted-foreground'>
-                                Issued: {card.issueDate}
+                                Issued: {formatDateTime(card.issueDate)}
                               </span>
                             )}
                           </div>

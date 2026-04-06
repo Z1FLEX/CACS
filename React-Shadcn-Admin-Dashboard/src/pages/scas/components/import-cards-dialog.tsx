@@ -23,7 +23,6 @@ interface Props {
 interface ParsedCard {
   cardNumber: string
   status: 'ACTIVE'
-  issueDate: string
 }
 
 export default function ImportCardsDialog({ open, onOpenChange }: Props) {
@@ -105,7 +104,6 @@ export default function ImportCardsDialog({ open, onOpenChange }: Props) {
           cards.push({
             cardNumber,
             status: 'ACTIVE',
-            issueDate: new Date().toISOString().split('T')[0],
           })
         }
       }
@@ -142,12 +140,10 @@ export default function ImportCardsDialog({ open, onOpenChange }: Props) {
 
     for (const cardData of parsedCards) {
       try {
-        const newCard: AccessCard = {
-          id: String(Date.now() + Math.random()),
+        const newCard: Partial<AccessCard> = {
           cardNumber: cardData.cardNumber,
           uid: cardData.cardNumber,
           status: cardData.status,
-          issueDate: cardData.issueDate,
         }
 
         await addAccessCard(newCard)

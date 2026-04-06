@@ -19,6 +19,11 @@ export type UserSubscriber = (users: User[]) => void
 
 /** Load users from API into store (no-op when not using API). Call once when using backend. */
 function normalizeUser(u: any): User {
+  const createdAt =
+    (typeof u.createdAt === 'string' && u.createdAt.trim() !== '' && u.createdAt) ||
+    (typeof u.created_at === 'string' && u.created_at.trim() !== '' && u.created_at) ||
+    new Date().toISOString()
+
   return {
     ...u,
     id: String(u.id),
@@ -27,6 +32,7 @@ function normalizeUser(u: any): User {
     status: (u.status || 'ACTIVE').toUpperCase(),
     role: (u.role || 'USER').toUpperCase(),
     name: u.name || [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email,
+    createdAt,
   }
 }
 
@@ -44,8 +50,32 @@ export function subscribeUsers(cb: UserSubscriber): () => void {
   return storeSubscribeUsers(cb)
 }
 
-export async function addUser(user: User): Promise<void> {
-  await apiCreateUser(user)
+function userToCreateBody(user: Partial<User>): Record<string, unknown> {
+  const cardIdNum =
+    user.cardId != null && user.cardId !== '' && !Number.isNaN(Number(user.cardId))
+      ? Number(user.cardId)
+      : undefined
+  const profileIdNum =
+    user.profileId != null && user.profileId !== '' && !Number.isNaN(Number(user.profileId))
+      ? Number(user.profileId)
+      : undefined
+
+  return {
+    name: user.name,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    address: user.address,
+    cardId: cardIdNum,
+    profileId: profileIdNum,
+    photo: user.photo,
+  }
+}
+
+export async function addUser(user: Partial<User>): Promise<void> {
+  await apiCreateUser(userToCreateBody(user))
   await loadUsers()
 }
 

@@ -65,9 +65,7 @@ export default function AddUserDialog({ open, onOpenChange, current }: Props) {
       }
       await updateUser(updated)
     } else {
-      const id = String(Date.now())
-      const newUser: User = {
-        id,
+      const newUser: Partial<User> = {
         name: vals.name,
         firstName: vals.name.split(' ')[0],
         lastName: vals.name.split(' ').slice(1).join(' ') || undefined,
@@ -75,7 +73,6 @@ export default function AddUserDialog({ open, onOpenChange, current }: Props) {
         role: vals.role as User['role'],
         status: (vals.status as User['status']) || 'ACTIVE',
         photo: vals.photo || undefined,
-        createdAt: new Date().toISOString().split('T')[0],
       }
       await addUser(newUser)
     }

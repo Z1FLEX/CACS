@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
+import { formatDateTime } from '@/lib/date-time'
 import type { User, AccessCard } from '@/types/scas'
 import { subscribeAccessCards, getAccessCards, loadAccessCards, updateUser, updateAccessCard } from '@/services'
 import AssignCardDialog from './assign-card-dialog'
@@ -115,7 +116,7 @@ export default function UserDetailsDialog({ open, onOpenChange, user }: Props) {
                       </Badge>
                     </div>
                     <div className='text-sm text-muted-foreground'>
-                      <p>Created: {user.createdAt}</p>
+                      <p>Created: {formatDateTime(user.createdAt)}</p>
                       {user.firstName && user.lastName && (
                         <p>Full Name: {user.firstName} {user.lastName}</p>
                       )}

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-wrapper'
 import { EmptyState } from '@/components/custom/empty-state'
+import { formatDateTime } from '@/lib/date-time'
 import type { User } from '@/types/scas'
 import { subscribeUsers, getUsers, loadUsers, removeUser, addUser } from '@/services'
 import AddUserDialog from './components/add-user-dialog'
@@ -92,15 +93,13 @@ export default function UsersPage() {
     
     for (const row of validRows) {
       try {
-        const newUser: User = {
-          id: String(Date.now() + Math.random()),
+        const newUser: Partial<User> = {
           name: row.name,
           firstName: row.name?.split(' ')[0] || '',
           lastName: row.name?.split(' ').slice(1).join(' ') || '',
           email: row.email,
           role: row.role || 'USER',
           status: row.status || 'ACTIVE',
-          createdAt: new Date().toISOString().split('T')[0],
           photo: row.photo || undefined,
         }
         
@@ -230,7 +229,7 @@ export default function UsersPage() {
                               <>
                                 {col.key === 'name' && <span className='font-medium'>{user.name}</span>}
                                 {col.key === 'email' && user.email}
-                                {col.key === 'createdAt' && user.createdAt}
+                                {col.key === 'createdAt' && formatDateTime(user.createdAt)}
                               </>
                             )}
                           </TableCell>

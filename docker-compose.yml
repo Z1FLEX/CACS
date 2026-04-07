@@ -34,7 +34,7 @@ services:
 
   backend:
     build:
-      context: ./HSWARE/CACS
+      context: ./backend/CACS
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
@@ -65,7 +65,7 @@ services:
 
   frontend:
     build:
-      context: ./React-Shadcn-Admin-Dashboard
+      context: ./frontend
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL}

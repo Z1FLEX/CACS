@@ -3,15 +3,15 @@
 !.env.example
 
 # Backend
-HSWARE/CACS/target/
-HSWARE/CACS/build/
-HSWARE/CACS/*.log
-HSWARE/CACS/backend.log
+backend/CACS/target/
+backend/CACS/*.log
+backend/CACS/backend.log
+backend/CACS/build/
 
 # Frontend
-React-Shadcn-Admin-Dashboard/node_modules/
-React-Shadcn-Admin-Dashboard/dist/
-React-Shadcn-Admin-Dashboard/dist-ssr/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
 
 # Common logs and temp files
 logs/
@@ -22,3 +22,4 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 .DS_Store
+.codex

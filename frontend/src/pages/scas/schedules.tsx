@@ -1,9 +1,9 @@
 import { useRef, useState, useEffect } from 'react'
 import FullCalendar from '@fullcalendar/react'
-import timeGridPlugin from '@fullcalendar/timegrid'
-import interactionPlugin from '@fullcalendar/interaction'
-import { EventClickArg } from '@fullcalendar/core'
-import { DateClickArg } from '@fullcalendar/interaction'
+import timeGridPlugin from '@fullcalendar/timegrid/index.js'
+import interactionPlugin from '@fullcalendar/interaction/index.js'
+import { EventClickArg } from '@fullcalendar/core/index.js'
+import { DateClickArg } from '@fullcalendar/interaction/index.js'
 import { Input } from "@/components/ui/input"
 import { Trash2, X } from 'lucide-react'
 import { addMinutes, format } from "date-fns"

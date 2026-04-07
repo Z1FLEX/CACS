@@ -1,10 +1,7 @@
 -- Create Admin Users for JWT Authentication Testing
 -- Run these queries in your PostgreSQL database to create test users
 
--- First, delete any existing test users to avoid conflicts
-DELETE FROM users WHERE email IN ('admin@cacs.com', 'test@cacs.com', 'responsable@cacs.com', 'user@cacs.com');
 
--- Admin User 1 - Email: admin@cacs.com, Password: admin123
 INSERT INTO users (email, password, first_name, last_name, role, status) 
 VALUES (
     'admin@cacs.com',
@@ -15,7 +12,6 @@ VALUES (
     'ACTIVE'
 );
 
--- Admin User 2 - Email: test@cacs.com, Password: test123
 INSERT INTO users (email, password, first_name, last_name, role, status) 
 VALUES (
     'test@cacs.com',
@@ -26,7 +22,6 @@ VALUES (
     'ACTIVE'
 );
 
--- Responsable User - Email: responsable@cacs.com, Password: resp123
 INSERT INTO users (email, password, first_name, last_name, role, status) 
 VALUES (
     'responsable@cacs.com',
@@ -37,7 +32,6 @@ VALUES (
     'ACTIVE'
 );
 
--- Regular User - Email: user@cacs.com, Password: user123
 INSERT INTO users (email, password, first_name, last_name, role, status) 
 VALUES (
     'user@cacs.com',
@@ -48,7 +42,6 @@ VALUES (
     'ACTIVE'
 );
 
--- Simple test user with known working hash - Email: simple@cacs.com, Password: password
 INSERT INTO users (email, password, first_name, last_name, role, status) 
 VALUES (
     'simple@cacs.com',
@@ -59,8 +52,11 @@ VALUES (
     'ACTIVE'
 );
 
--- Verify the users were created
 SELECT id, email, first_name, last_name, role, status, created_at 
 FROM users 
 WHERE deleted_at IS NULL 
 ORDER BY created_at DESC;
+
+
+-- TST DL--
+-- Obsidian first page --

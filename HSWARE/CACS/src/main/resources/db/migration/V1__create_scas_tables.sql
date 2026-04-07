@@ -1,20 +1,9 @@
-
--- =========================
--- ENUM VALUES (stored as VARCHAR for JPA compatibility; values match spec)
--- ADMIN, RESPONSABLE, USER | ACTIVE, INACTIVE | ACTIVE, INACTIVE, REVOKED | ONLINE, OFFLINE | AUTHORIZED, DENIED
--- =========================
-
--- =========================
--- PHOTO
--- =========================
 CREATE TABLE photo (
                        id SERIAL PRIMARY KEY,
                        content BYTEA NOT NULL
 );
 
--- =========================
--- ZONE TYPE
--- =========================
+
 CREATE TABLE zone_type (
                            id SERIAL PRIMARY KEY,
                            name VARCHAR(50) NOT NULL,
@@ -22,9 +11,7 @@ CREATE TABLE zone_type (
                            deleted_at TIMESTAMP
 );
 
--- =========================
--- ZONE
--- =========================
+
 CREATE TABLE zone (
                       id SERIAL PRIMARY KEY,
                       name VARCHAR(100) NOT NULL,
@@ -33,27 +20,21 @@ CREATE TABLE zone (
                       deleted_at TIMESTAMP
 );
 
--- =========================
--- SCHEDULE
--- =========================
+
 CREATE TABLE schedule (
                           id SERIAL PRIMARY KEY,
                           name VARCHAR(100) NOT NULL,
                           deleted_at TIMESTAMP
 );
 
--- =========================
--- SCHEDULE DAY
--- =========================
+
 CREATE TABLE schedule_day (
                               id SERIAL PRIMARY KEY,
                               schedule_id INTEGER NOT NULL REFERENCES schedule(id),
                               day_index INTEGER NOT NULL CHECK (day_index BETWEEN 1 AND 7)
 );
 
--- =========================
--- DAY TIME SLOT
--- =========================00
+
 CREATE TABLE day_time_slot (
                                id SERIAL PRIMARY KEY,
                                schedule_day_id INTEGER NOT NULL REFERENCES schedule_day(id),
@@ -61,9 +42,7 @@ CREATE TABLE day_time_slot (
                                end_time TIME NOT NULL
 );
 
--- =========================
--- PROFILE
--- =========================
+
 CREATE TABLE profile (
                          id SERIAL PRIMARY KEY,
                          name VARCHAR(100) NOT NULL,
@@ -71,9 +50,7 @@ CREATE TABLE profile (
                          deleted_at TIMESTAMP
 );
 
--- =========================
--- PROFILE ↔ ZONE (M:N)
--- =========================
+
 CREATE TABLE profile_zone (
                               profile_id INTEGER NOT NULL REFERENCES profile(id),
                               zone_id INTEGER NOT NULL REFERENCES zone(id),
@@ -81,9 +58,7 @@ CREATE TABLE profile_zone (
 );
 
 
--- =========================
--- ACCESS CARD
--- =========================
+
 CREATE TABLE access_card (
                              id SERIAL PRIMARY KEY,
                              uid VARCHAR(100) UNIQUE NOT NULL,
@@ -92,9 +67,7 @@ CREATE TABLE access_card (
                              deleted_at TIMESTAMP WITH TIME ZONE
 );
 
--- =========================
--- USERS
--- =========================
+
 CREATE TABLE users (
                        id SERIAL PRIMARY KEY,
                        email VARCHAR(255) UNIQUE NOT NULL,
@@ -112,18 +85,14 @@ CREATE TABLE users (
                        deleted_at TIMESTAMP
 );
 
--- =========================
--- ZONE RESPONSIBILITY (responsable ↔ zones)
--- =========================
+
 CREATE TABLE zone_responsibility (
                                      user_id INTEGER NOT NULL REFERENCES users(id),
                                      zone_id INTEGER NOT NULL REFERENCES zone(id),
                                      PRIMARY KEY (user_id, zone_id)
 );
 
--- =========================
--- DOOR
--- =========================
+
 CREATE TABLE door (
                       id SERIAL PRIMARY KEY,
                       name VARCHAR(100),
@@ -131,9 +100,7 @@ CREATE TABLE door (
                       deleted_at TIMESTAMP
 );
 
--- =========================
--- DEVICE
--- =========================
+
 CREATE TABLE device (
                         id SERIAL PRIMARY KEY,
                         serial_number VARCHAR(100) UNIQUE NOT NULL,
@@ -147,9 +114,7 @@ CREATE TABLE device (
                         deleted_at TIMESTAMP
 );
 
--- =========================
--- ACCESS LOG
--- =========================
+
 CREATE TABLE access_log (
                             id SERIAL PRIMARY KEY,
                             card_uid VARCHAR(100),
@@ -160,9 +125,7 @@ CREATE TABLE access_log (
                             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =========================
--- ADMIN AUDIT LOG
--- =========================
+
 CREATE TABLE admin_audit_log (
                                  id SERIAL PRIMARY KEY,
                                  admin_id INTEGER REFERENCES users(id),
@@ -173,9 +136,7 @@ CREATE TABLE admin_audit_log (
                                  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =========================
--- INDEXES
--- =========================
+
 CREATE INDEX idx_access_log_timestamp ON access_log(timestamp);
 CREATE INDEX idx_access_log_zone_id ON access_log(zone_id);
 CREATE INDEX idx_access_log_device_id ON access_log(device_id);
@@ -191,7 +152,6 @@ CREATE INDEX idx_device_deleted_at ON device(deleted_at);
 CREATE INDEX idx_profile_deleted_at ON profile(deleted_at);
 CREATE INDEX idx_schedule_deleted_at ON schedule(deleted_at);
 
--- Seed zone types (spec levels 0-5)
 INSERT INTO zone_type (name, security_level) VALUES
                                                  ('White', 0),
                                                  ('Green', 1),

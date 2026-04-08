@@ -26,8 +26,8 @@ FROM nginx:1.27-alpine
 # Remove default nginx config
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy template-based nginx config so production settings can be injected at runtime.
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Copy built frontend
 COPY --from=build /app/dist /usr/share/nginx/html

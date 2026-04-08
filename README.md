@@ -77,6 +77,12 @@ See logs:
 docker compose logs -f
 ```
 
+Production-shaped startup:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
+```
+
 
 
 
@@ -86,4 +92,4 @@ docker compose logs -f
 - Redis data is persisted in the Docker volume `cacs_redis_data`
 - The backend uses Redis for caching and token blacklist behavior
 - The backend uses Flyway migrations on startup
-
+- For production deployment structure and the HTTPS rollout plan, see `docs/production-https.md`

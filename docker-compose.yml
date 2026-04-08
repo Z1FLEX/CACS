@@ -73,6 +73,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    environment:
+      SERVER_NAME: ${SERVER_NAME:-_}
     ports:
       - "80:80"
     networks:

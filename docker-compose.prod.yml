@@ -1,0 +1,15 @@
+services:
+  postgres:
+    ports: !reset []
+
+  redis:
+    ports: !reset []
+
+  backend:
+    ports: !reset []
+
+  frontend:
+    environment:
+      SERVER_NAME: ${SERVER_NAME:-_}
+    ports:
+      - "80:80"

@@ -89,6 +89,10 @@ Production certificate issuance:
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile certbot run --rm certbot certonly --webroot --webroot-path /var/www/certbot --email your-email@example.com --agree-tos --no-eff-email -d example.com
 ```
 
+Production HTTPS checklist:
+
+See `docs/production-https.md` for the staged rollout, certificate layout, and final hardening checklist.
+
 
 
 

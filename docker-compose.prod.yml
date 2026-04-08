@@ -16,6 +16,7 @@ services:
       SERVER_NAME: ${SERVER_NAME:-_}
       TLS_CERTIFICATE_PATH: ${TLS_CERTIFICATE_PATH:-/etc/letsencrypt/live/replace-with-your-domain/fullchain.pem}
       TLS_CERTIFICATE_KEY_PATH: ${TLS_CERTIFICATE_KEY_PATH:-/etc/letsencrypt/live/replace-with-your-domain/privkey.pem}
+      HSTS_HEADER_VALUE: ${HSTS_HEADER_VALUE:-max-age=31536000}
     volumes:
       - ${TLS_LETSENCRYPT_DIR:-./infra/letsencrypt}:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot

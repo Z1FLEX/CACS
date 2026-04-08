@@ -92,3 +92,39 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile certbo
 ```
 
 You should follow renewal with a frontend reload or restart so Nginx picks up the new certificate files.
+
+## Step 4 delivered here
+
+- Restricted TLS to modern protocol versions: TLS 1.2 and TLS 1.3.
+- Added baseline response hardening headers at the HTTPS edge.
+- Made HSTS configurable through environment so rollout can be conservative first and stricter later.
+- Added a final production rollout checklist.
+
+## Recommended HSTS rollout
+
+Start conservatively on the first production deploy:
+
+```bash
+HSTS_HEADER_VALUE=max-age=300
+```
+
+After verifying HTTPS works correctly and all subresources are clean, move to a long-lived value such as:
+
+```bash
+HSTS_HEADER_VALUE=max-age=31536000
+```
+
+Only add `includeSubDomains` or `preload` after confirming every subdomain is HTTPS-ready.
+
+## Final production checklist
+
+- Set `SERVER_NAME` to the real public hostname.
+- Set `TLS_CERTIFICATE_PATH` and `TLS_CERTIFICATE_KEY_PATH` to the correct certificate lineage.
+- Issue the certificate successfully with the `certbot` profile.
+- Bring up the production stack with both Compose files.
+- Verify `http://your-domain` redirects to `https://your-domain`.
+- Verify the frontend loads fully over HTTPS with no mixed-content warnings.
+- Verify `/api` requests succeed behind the Nginx proxy.
+- Verify Swagger works correctly at `https://your-domain/swagger-ui/`.
+- Set a conservative `HSTS_HEADER_VALUE` first, then increase it after validation.
+- Automate `certbot renew` plus an Nginx reload or frontend restart on your host scheduler.

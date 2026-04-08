@@ -14,8 +14,22 @@ services:
         NGINX_TEMPLATE: nginx.https.conf
     environment:
       SERVER_NAME: ${SERVER_NAME:-_}
-      TLS_CERTIFICATE_PATH: ${TLS_CERTIFICATE_PATH:-/etc/nginx/tls/fullchain.pem}
-      TLS_CERTIFICATE_KEY_PATH: ${TLS_CERTIFICATE_KEY_PATH:-/etc/nginx/tls/privkey.pem}
+      TLS_CERTIFICATE_PATH: ${TLS_CERTIFICATE_PATH:-/etc/letsencrypt/live/replace-with-your-domain/fullchain.pem}
+      TLS_CERTIFICATE_KEY_PATH: ${TLS_CERTIFICATE_KEY_PATH:-/etc/letsencrypt/live/replace-with-your-domain/privkey.pem}
+    volumes:
+      - ${TLS_LETSENCRYPT_DIR:-./infra/letsencrypt}:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot
     ports:
       - "80:80"
       - "443:443"
+
+  certbot:
+    image: certbot/certbot:latest
+    profiles:
+      - certbot
+    volumes:
+      - ${TLS_LETSENCRYPT_DIR:-./infra/letsencrypt}:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+
+volumes:
+  certbot_www:

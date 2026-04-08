@@ -83,6 +83,12 @@ Production-shaped startup:
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
 ```
 
+Production certificate issuance:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile certbot run --rm certbot certonly --webroot --webroot-path /var/www/certbot --email your-email@example.com --agree-tos --no-eff-email -d example.com
+```
+
 
 
 

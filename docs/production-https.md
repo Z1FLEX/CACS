@@ -29,3 +29,12 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
 ```
 
 At this stage, traffic is still plain HTTP on port 80. HTTPS certificate wiring comes in the next step.
+
+## Step 2 delivered here
+
+- Split frontend Nginx into dedicated HTTP and HTTPS templates.
+- Added an HTTP to HTTPS redirect in the production template.
+- Exposed port 443 in the production Compose override.
+- Added explicit environment variables for the TLS certificate and key paths, with default in-container locations under `/etc/nginx/tls`.
+
+The production stack is now TLS-aware, but it still needs certificate files to be mounted before it can boot successfully in HTTPS mode.

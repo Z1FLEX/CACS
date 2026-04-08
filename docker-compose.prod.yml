@@ -9,7 +9,13 @@ services:
     ports: !reset []
 
   frontend:
+    build:
+      args:
+        NGINX_TEMPLATE: nginx.https.conf
     environment:
       SERVER_NAME: ${SERVER_NAME:-_}
+      TLS_CERTIFICATE_PATH: ${TLS_CERTIFICATE_PATH:-/etc/nginx/tls/fullchain.pem}
+      TLS_CERTIFICATE_KEY_PATH: ${TLS_CERTIFICATE_KEY_PATH:-/etc/nginx/tls/privkey.pem}
     ports:
       - "80:80"
+      - "443:443"

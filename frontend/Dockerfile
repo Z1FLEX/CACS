@@ -23,19 +23,25 @@ RUN npm run build
 # ========================
 FROM nginx:1.27-alpine
 
+ARG NGINX_TEMPLATE=nginx.http.conf
+
 # Remove default nginx config
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Copy template-based nginx config so production settings can be injected at runtime.
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+# Copy both templates and activate the selected one at build time.
+COPY nginx.http.conf /tmp/nginx.http.conf
+COPY nginx.https.conf /tmp/nginx.https.conf
+RUN cp "/tmp/${NGINX_TEMPLATE}" /etc/nginx/templates/default.conf.template && \
+    rm /tmp/nginx.http.conf /tmp/nginx.https.conf
 
 # Copy built frontend
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # Healthcheck (important)
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget --quiet --spider http://localhost || exit 1
+  CMD wget --quiet --spider http://localhost/healthz || exit 1
 
 EXPOSE 80
+EXPOSE 443
 
 CMD ["nginx", "-g", "daemon off;"]

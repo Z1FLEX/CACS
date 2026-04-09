@@ -25,8 +25,9 @@ FROM nginx:1.27-alpine
 
 ARG NGINX_TEMPLATE=nginx.http.conf
 
-# Remove default nginx config
-RUN rm /etc/nginx/conf.d/default.conf
+# Remove default nginx config and ensure the template directory exists for envsubst.
+RUN rm /etc/nginx/conf.d/default.conf && \
+    mkdir -p /etc/nginx/templates
 
 # Copy both templates and activate the selected one at build time.
 COPY nginx.http.conf /tmp/nginx.http.conf

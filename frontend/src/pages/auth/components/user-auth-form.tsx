@@ -49,10 +49,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
-    console.log('Submitting form...', data)
     try {
       await authLogin(data.email, data.password)
-      console.log('Login successful, navigating to dashboard')
       toast({
         title: 'Login Successful',
         description: 'Welcome back! Redirecting to dashboard...',

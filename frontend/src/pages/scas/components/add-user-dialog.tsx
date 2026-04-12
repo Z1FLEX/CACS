@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Dialog,
@@ -16,21 +15,13 @@ import { Button } from '@/components/custom/button'
 import { SelectDropdown } from '@/components/select-dropdown'
 import type { User } from '@/types/scas'
 import { addUser, updateUser } from '@/services'
-
-const roles = [
-  { label: 'User', value: 'USER' },
-  { label: 'Responsable', value: 'RESPONSABLE' },
-  { label: 'Admin', value: 'ADMIN' },
-]
-
-const schema = z.object({
-  name: z.string().min(1, 'Full name is required'),
-  email: z.string().email('Invalid email'),
-  role: z.enum(['USER', 'RESPONSABLE', 'ADMIN']),
-  status: z.enum(['ACTIVE', 'INACTIVE']),
-  photo: z.string().optional(),
-})
-type FormValues = z.infer<typeof schema>
+import {
+  buildNewUserDraft,
+  userCreateSchema,
+  userRoleOptions,
+  userStatusOptions,
+  type UserCreateValues,
+} from '../lib/user-create'
 
 interface Props {
   open: boolean
@@ -39,7 +30,7 @@ interface Props {
 }
 
 export default function AddUserDialog({ open, onOpenChange, current }: Props) {
-  const form = useForm<FormValues>({ resolver: zodResolver(schema) })
+  const form = useForm<UserCreateValues>({ resolver: zodResolver(userCreateSchema) })
 
   useEffect(() => {
     if (current) {
@@ -48,12 +39,11 @@ export default function AddUserDialog({ open, onOpenChange, current }: Props) {
         email: current.email,
         role: current.role,
         status: current.status,
-        photo: current.photo,
       })
     }
   }, [current])
 
-  const onSubmit = async (vals: FormValues) => {
+  const onSubmit = async (vals: UserCreateValues) => {
     if (current) {
       const updated: User = {
         ...current,
@@ -61,20 +51,10 @@ export default function AddUserDialog({ open, onOpenChange, current }: Props) {
         email: vals.email,
         role: vals.role as User['role'],
         status: vals.status as User['status'],
-        photo: vals.photo || undefined,
       }
       await updateUser(updated)
     } else {
-      const newUser: Partial<User> = {
-        name: vals.name,
-        firstName: vals.name.split(' ')[0],
-        lastName: vals.name.split(' ').slice(1).join(' ') || undefined,
-        email: vals.email,
-        role: vals.role as User['role'],
-        status: (vals.status as User['status']) || 'ACTIVE',
-        photo: vals.photo || undefined,
-      }
-      await addUser(newUser)
+      await addUser(buildNewUserDraft(vals))
     }
 
     form.reset()
@@ -131,7 +111,7 @@ export default function AddUserDialog({ open, onOpenChange, current }: Props) {
                 <FormItem>
                   <FormLabel>Role</FormLabel>
                   <FormControl>
-                    <SelectDropdown items={roles} defaultValue={field.value} onValueChange={field.onChange} />
+                    <SelectDropdown items={[...userRoleOptions]} defaultValue={field.value} onValueChange={field.onChange} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -145,21 +125,7 @@ export default function AddUserDialog({ open, onOpenChange, current }: Props) {
                 <FormItem>
                   <FormLabel>Status</FormLabel>
                   <FormControl>
-                    <SelectDropdown items={[{ label: 'Active', value: 'ACTIVE' }, { label: 'Inactive', value: 'INACTIVE' }]} defaultValue={field.value} onValueChange={field.onChange} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='photo'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Photo (optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder='https://...' {...field} />
+                    <SelectDropdown items={[...userStatusOptions]} defaultValue={field.value} onValueChange={field.onChange} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

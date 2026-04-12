@@ -23,6 +23,7 @@ import AddUserDialog from './components/add-user-dialog'
 import UserDetailsDialog from './components/user-details-dialog'
 import CSVImportDialog from '@/components/custom/csv-import-dialog'
 import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
+import { buildNewUserDraft, userImportExampleData, userImportFields } from './lib/user-create'
 
 const userColumns: ColumnConfig[] = [
   { key: 'photo', label: 'Photo', visible: true },
@@ -93,17 +94,14 @@ export default function UsersPage() {
     
     for (const row of validRows) {
       try {
-        const newUser: Partial<User> = {
-          name: row.name,
-          firstName: row.name?.split(' ')[0] || '',
-          lastName: row.name?.split(' ').slice(1).join(' ') || '',
-          email: row.email,
-          role: row.role || 'USER',
-          status: row.status || 'ACTIVE',
-          photo: row.photo || undefined,
-        }
-        
-        await addUser(newUser)
+        await addUser(
+          buildNewUserDraft({
+            name: row.name,
+            email: row.email,
+            role: row.role || 'USER',
+            status: row.status || 'ACTIVE',
+          })
+        )
         importedCount++
       } catch (error) {
         console.error('Failed to import user:', error)
@@ -250,29 +248,8 @@ export default function UsersPage() {
           onOpenChange={setImportOpen}
           title='Import Users'
           description='Bulk import users from a CSV file. Users will be created with the provided information.'
-          fields={[
-            { key: 'name', label: 'Full Name', required: true, type: 'string' },
-            { key: 'email', label: 'Email', required: true, type: 'email' },
-            { key: 'role', label: 'Role', required: false, type: 'enum', options: ['USER', 'RESPONSABLE', 'ADMIN'] },
-            { key: 'status', label: 'Status', required: false, type: 'enum', options: ['ACTIVE', 'INACTIVE'] },
-            { key: 'photo', label: 'Photo URL', required: false, type: 'string' },
-          ]}
-          exampleData={[
-            {
-              name: 'John Doe',
-              email: 'john.doe@example.com',
-              role: 'USER',
-              status: 'ACTIVE',
-              photo: 'https://example.com/photo.jpg'
-            },
-            {
-              name: 'Jane Smith',
-              email: 'jane.smith@example.com',
-              role: 'RESPONSABLE',
-              status: 'ACTIVE',
-              photo: ''
-            }
-          ]}
+          fields={[...userImportFields]}
+          exampleData={[...userImportExampleData]}
           onImport={handleImportUsers}
           templateFileName='users-template.csv'
         />

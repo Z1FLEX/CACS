@@ -1,7 +1,7 @@
 .env
 .env.*
 !.env.example
-
+.env.local
 # Backend
 backend/CACS/target/
 backend/CACS/*.log
@@ -23,3 +23,6 @@ pnpm-debug.log*
 lerna-debug.log*
 .DS_Store
 .codex
+
+
+infra/tls/rootCA-key.pem

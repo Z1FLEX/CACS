@@ -6,100 +6,114 @@ SCAS is a full-stack access control application with:
 - React + TypeScript frontend
 - PostgreSQL database
 - Redis for token blacklist / auth support
-- Docker Compose setup for one-command startup
+- Fully containerized with Docker
 
 ## Project Specifications
+
 **[View/Download Cahier des Charges (PDF)](./docs/Cahier_des_Charges_CACS.pdf)**
 
 ## Project Structure
 
-- `HSWARE/CACS` - Spring Boot backend
-- `React-Shadcn-Admin-Dashboard` - React frontend
-- `docker-compose.yml` - root Docker Compose entrypoint
+- `HSWARE/CACS` — Spring Boot backend
+- `React-Shadcn-Admin-Dashboard` — React frontend
+- `docker-compose.yml` — base Docker Compose config
+- `docker-compose.prod.yml` — production overlay (HTTPS)
+- `infra/tls/` — local TLS certificates (committed, generated with mkcert)
 
 ## Prerequisites
 
-Install:
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
-- Docker
-- Docker Compose
+---
 
-## Quick Start
+## Quick Start (Local HTTPS)
 
-1. Clone or extract the project.
-2. Open a terminal in the project root:
+> Steps 2 and 3 are one-time only.
+
+1. Clone the project and open a terminal in the project root:
 
 ```bash
 cd CACS
 ```
 
-3. Create a real `.env` file from `.env.example`.
-4. Fill in the required values.
-5. Start the app:
+2. Create your local env file:
 
 ```bash
-docker compose up --build
+cp .env.local.example .env.local
 ```
 
+3. Install the local CA so your browser trusts `https://localhost`:
 
+```bash
+chmod +x setup-local-https.sh
+./setup-local-https.sh
+```
 
+> Restart your browser after this step.
+
+4. Start the stack:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.local up --build
+```
+
+5. Open **[https://localhost](https://localhost)**
+
+---
 
 ## Useful Commands
 
-Start:
-
+**Start (HTTP only, dev mode):**
 ```bash
 docker compose up --build
 ```
 
-Start in background:
-
+**Start in background:**
 ```bash
 docker compose up -d --build
 ```
 
-Stop:
-
+**Stop:**
 ```bash
 docker compose down
 ```
 
-Rebuild everything:
+**Stop and wipe volumes (fresh DB):**
+```bash
+docker compose down -v
+```
 
+**Rebuild everything from scratch:**
 ```bash
 docker compose down
 docker compose up --build --force-recreate
 ```
 
-See logs:
-
+**Follow logs:**
 ```bash
 docker compose logs -f
 ```
 
-Production-shaped startup:
-
+**Local HTTPS startup:**
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.local up --build
 ```
 
-Production certificate issuance:
-
+**Issue a production certificate (first time):**
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile certbot run --rm certbot certonly --webroot --webroot-path /var/www/certbot --email your-email@example.com --agree-tos --no-eff-email -d example.com
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile certbot run --rm certbot \
+  certonly --webroot --webroot-path /var/www/certbot \
+  --email your-email@example.com --agree-tos --no-eff-email \
+  -d example.com
 ```
 
-Production HTTPS checklist:
-
-See `docs/production-https.md` for the staged rollout, certificate layout, and final hardening checklist.
-
-
-
+---
 
 ## Notes
 
-- PostgreSQL data is persisted in the Docker volume `cacs_postgres_data`
-- Redis data is persisted in the Docker volume `cacs_redis_data`
+- PostgreSQL data is persisted in Docker volume `cacs_postgres_data`
+- Redis data is persisted in Docker volume `cacs_redis_data`
 - The backend uses Redis for caching and token blacklist behavior
 - The backend uses Flyway migrations on startup
-- For production deployment structure and the HTTPS rollout plan, see `docs/production-https.md`
+- For production deployment, certificate layout, and hardening checklist see `docs/production-https.md`

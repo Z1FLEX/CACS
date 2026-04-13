@@ -71,6 +71,15 @@ public class User {
     @Builder.Default
     private Set<Zone> responsibleZones = new HashSet<>();
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "user_roles",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    @Builder.Default
+    private Set<Role> roles = new HashSet<>();
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) createdAt = Instant.now();

@@ -247,7 +247,7 @@ export default function UsersPage() {
           open={importOpen}
           onOpenChange={setImportOpen}
           title='Import Users'
-          description='Bulk import users from a CSV file. Users will be created with the provided information.'
+          description='Bulk import users from a CSV file. Supported columns are Full Name, Email, Role, and Status, which match the normal user creation form.'
           fields={[...userImportFields]}
           exampleData={[...userImportExampleData]}
           onImport={handleImportUsers}

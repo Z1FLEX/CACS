@@ -12,22 +12,23 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
 import { addAccessCard } from '@/services'
-import type { AccessCard } from '@/types/scas'
 import { IconUpload, IconFileText, IconX } from '@tabler/icons-react'
+import {
+  accessCardImportDescription,
+  accessCardImportExampleData,
+  accessCardStatusOptions,
+  buildNewAccessCardDraft,
+  type AccessCardCreateValues,
+} from '../lib/access-card-create'
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-interface ParsedCard {
-  cardNumber: string
-  status: 'ACTIVE'
-}
-
 export default function ImportCardsDialog({ open, onOpenChange }: Props) {
   const [isDragging, setIsDragging] = useState(false)
-  const [parsedCards, setParsedCards] = useState<ParsedCard[]>([])
+  const [parsedCards, setParsedCards] = useState<AccessCardCreateValues[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
@@ -80,30 +81,40 @@ export default function ImportCardsDialog({ open, onOpenChange }: Props) {
     try {
       const lines = text.trim().split('\n')
       const headers = lines[0].toLowerCase().split(',').map(h => h.trim())
+      type AccessCardStatus = AccessCardCreateValues['status']
       
       const cardNumberIndex = headers.findIndex(h => 
         h.includes('card') || h.includes('uid') || h.includes('number')
       )
+      const statusIndex = headers.findIndex(h => h.includes('status'))
       
       if (cardNumberIndex === -1) {
         toast({
           title: 'Invalid CSV format',
-          description: 'CSV must contain a column with card numbers/UIDs.',
+          description: 'CSV must contain a Card UID column.',
           variant: 'destructive',
         })
         return
       }
 
-      const cards: ParsedCard[] = []
+      const cards: AccessCardCreateValues[] = []
+      const validStatuses = new Set<AccessCardStatus>(accessCardStatusOptions.map((option) => option.value))
+      let invalidStatusCount = 0
       
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',').map(v => v.trim())
         const cardNumber = values[cardNumberIndex]
+        const rawStatus = (statusIndex >= 0 ? values[statusIndex]?.toUpperCase() : '') as AccessCardStatus | ''
+        const status: AccessCardStatus = rawStatus && validStatuses.has(rawStatus) ? rawStatus : 'ACTIVE'
+
+        if (rawStatus && !validStatuses.has(rawStatus)) {
+          invalidStatusCount++
+        }
         
         if (cardNumber && cardNumber !== '') {
           cards.push({
             cardNumber,
-            status: 'ACTIVE',
+            status,
           })
         }
       }
@@ -120,7 +131,9 @@ export default function ImportCardsDialog({ open, onOpenChange }: Props) {
       setParsedCards(cards)
       toast({
         title: 'CSV parsed successfully',
-        description: `Found ${cards.length} card(s) to import.`,
+        description: invalidStatusCount > 0
+          ? `Found ${cards.length} card(s) to import. ${invalidStatusCount} row(s) used ACTIVE because the status value was invalid.`
+          : `Found ${cards.length} card(s) to import.`,
       })
     } catch (error) {
       toast({
@@ -140,13 +153,7 @@ export default function ImportCardsDialog({ open, onOpenChange }: Props) {
 
     for (const cardData of parsedCards) {
       try {
-        const newCard: Partial<AccessCard> = {
-          cardNumber: cardData.cardNumber,
-          uid: cardData.cardNumber,
-          status: cardData.status,
-        }
-
-        await addAccessCard(newCard)
+        await addAccessCard(buildNewAccessCardDraft(cardData))
         successCount++
       } catch (error) {
         errorCount++
@@ -181,7 +188,7 @@ export default function ImportCardsDialog({ open, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle>Import Access Cards</DialogTitle>
           <DialogDescription>
-            Upload a CSV file to bulk import access cards. The CSV should contain a column with card numbers/UIDs.
+            {accessCardImportDescription}
           </DialogDescription>
         </DialogHeader>
 
@@ -264,9 +271,11 @@ export default function ImportCardsDialog({ open, onOpenChange }: Props) {
             <p className='font-medium mb-1'>CSV Format Requirements:</p>
             <ul className='list-disc list-inside space-y-1'>
               <li>First row should contain column headers</li>
-              <li>Column name should contain "card", "uid", or "number"</li>
-              <li>Each row should have a card number/UID</li>
-              <li>Example: cardNumber, AC-0001, AC-0002, AC-0003</li>
+              <li>Supported columns are Card UID and Status</li>
+              <li>Status is optional and must be ACTIVE, INACTIVE, or REVOKED</li>
+              <li>Each row should have a card UID</li>
+              <li>Example header: cardNumber,status</li>
+              <li>Example rows: {accessCardImportExampleData.map((row) => `${row.cardNumber},${row.status}`).join(' | ')}</li>
             </ul>
           </div>
         </div>

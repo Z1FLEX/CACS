@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -16,12 +15,12 @@ import { Button } from '@/components/custom/button'
 import { SelectDropdown } from '@/components/select-dropdown'
 import type { AccessCard } from '@/types/scas'
 import { getAccessCards, addAccessCard, updateAccessCard } from '@/services'
-
-const schema = z.object({
-  cardNumber: z.string().min(1, 'Card UID is required'),
-  status: z.enum(['ACTIVE', 'INACTIVE', 'REVOKED']).optional(),
-})
-type FormValues = z.infer<typeof schema>
+import {
+  accessCardCreateSchema,
+  accessCardStatusOptions,
+  buildNewAccessCardDraft,
+  type AccessCardCreateValues,
+} from '../lib/access-card-create'
 
 interface Props {
   open: boolean
@@ -30,7 +29,10 @@ interface Props {
 }
 
 export default function AddCardDialog({ open, onOpenChange, current }: Props) {
-  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { status: 'ACTIVE' } })
+  const form = useForm<AccessCardCreateValues>({
+    resolver: zodResolver(accessCardCreateSchema),
+    defaultValues: { status: 'ACTIVE', cardNumber: '' },
+  })
 
   useEffect(() => {
     if (current) {
@@ -41,7 +43,7 @@ export default function AddCardDialog({ open, onOpenChange, current }: Props) {
     }
   }, [current, form])
 
-  const onSubmit = async (vals: FormValues) => {
+  const onSubmit = async (vals: AccessCardCreateValues) => {
     const existing = getAccessCards().find(c => (c.cardNumber || (c as any).uid) === vals.cardNumber && (!current || c.id !== current.id))
     if (existing) {
       form.setError('cardNumber', { message: 'Card UID already exists' })
@@ -56,13 +58,7 @@ export default function AddCardDialog({ open, onOpenChange, current }: Props) {
       }
       await updateAccessCard(updated)
     } else {
-      const newCard: Partial<AccessCard> = {
-        cardNumber: vals.cardNumber,
-        uid: vals.cardNumber,
-        status: (vals.status as AccessCard['status']) || 'ACTIVE',
-      }
-
-      await addAccessCard(newCard)
+      await addAccessCard(buildNewAccessCardDraft(vals))
     }
 
     form.reset()
@@ -105,7 +101,7 @@ export default function AddCardDialog({ open, onOpenChange, current }: Props) {
                 <FormItem>
                   <FormLabel>Status</FormLabel>
                   <FormControl>
-                    <SelectDropdown items={[{ label: 'Active', value: 'ACTIVE' }, { label: 'Inactive', value: 'INACTIVE' }, { label: 'Revoked', value: 'REVOKED' }]} defaultValue={field.value} onValueChange={field.onChange} />
+                    <SelectDropdown items={[...accessCardStatusOptions]} defaultValue={field.value} onValueChange={field.onChange} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

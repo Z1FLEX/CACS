@@ -1,6 +1,7 @@
 package com.hsware.cacs.repository;
 
 import com.hsware.cacs.entity.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -14,6 +15,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     Optional<User> findByAccessCard_Id(Integer accessCardId);
 
+    @EntityGraph(attributePaths = {"roles"})
     Optional<User> findByEmailAndDeletedAtIsNull(String email);
 
     /** Users responsible for this zone (zone_responsibility join) */

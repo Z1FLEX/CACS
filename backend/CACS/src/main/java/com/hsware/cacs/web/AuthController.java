@@ -16,7 +16,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -45,9 +47,18 @@ public class AuthController {
             // Get user details from database
             User user = userRepository.findByEmailAndDeletedAtIsNull(loginRequest.getEmail())
                     .orElseThrow(() -> new RuntimeException("User not found"));
+
+            List<String> roleNames = user.getRoles().stream()
+                    .map(role -> role.getName().toUpperCase())
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            if (roleNames.isEmpty() && user.getRole() != null && !user.getRole().isBlank()) {
+                roleNames = List.of(user.getRole().toUpperCase());
+            }
             
-            String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole());
-            String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), user.getRole());
+            String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), roleNames);
+            String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), roleNames);
 
             Map<String, Object> response = new HashMap<>();
             response.put("accessToken", accessToken);
@@ -56,7 +67,8 @@ public class AuthController {
             Map<String, Object> userResponse = new HashMap<>();
             userResponse.put("id", user.getId());
             userResponse.put("email", user.getEmail());
-            userResponse.put("role", user.getRole());
+            userResponse.put("roles", roleNames);
+            userResponse.put("role", roleNames.isEmpty() ? null : roleNames.get(0));
             response.put("user", userResponse);
 
             return ResponseEntity.ok(response);
@@ -84,9 +96,9 @@ public class AuthController {
 
             String email = jwtService.extractEmail(refreshToken);
             Integer userId = jwtService.extractUserId(refreshToken);
-            String role = jwtService.extractRole(refreshToken);
+            List<String> roles = jwtService.extractRoles(refreshToken);
 
-            String newAccessToken = jwtService.generateAccessToken(userId, email, role);
+            String newAccessToken = jwtService.generateAccessToken(userId, email, roles);
 
             return ResponseEntity.ok(Map.of(
                 "accessToken", newAccessToken

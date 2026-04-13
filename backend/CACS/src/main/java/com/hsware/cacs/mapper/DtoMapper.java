@@ -5,6 +5,7 @@ import com.hsware.cacs.entity.*;
 import com.hsware.cacs.repository.AccessCardRepository;
 import com.hsware.cacs.repository.DoorRepository;
 import com.hsware.cacs.repository.ProfileRepository;
+import com.hsware.cacs.repository.RoleRepository;
 import com.hsware.cacs.repository.ScheduleRepository;
 import com.hsware.cacs.repository.UserRepository;
 import com.hsware.cacs.repository.ZoneRepository;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -25,6 +27,7 @@ public class DtoMapper {
 
     private final AccessCardRepository accessCardRepository;
     private final ProfileRepository profileRepository;
+    private final RoleRepository roleRepository;
     private final ZoneRepository zoneRepository;
     private final ZoneTypeRepository zoneTypeRepository;
     private final DoorRepository doorRepository;
@@ -39,13 +42,23 @@ public class DtoMapper {
             name = nullToEmpty(user.getEmail());
         }
 
+        Set<String> roleNames = user.getRoles().stream()
+            .map(Role::getName)
+            .filter(roleName -> roleName != null && !roleName.isBlank())
+            .map(String::toUpperCase)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (roleNames.isEmpty() && user.getRole() != null && !user.getRole().isBlank()) {
+            roleNames.add(user.getRole().toUpperCase());
+        }
+
         return new UserDTO(
             user.getId(),
             name,
             nullToEmpty(user.getFirstName()),
             nullToEmpty(user.getLastName()),
             nullToEmpty(user.getEmail()),
-            nullToEmpty(user.getRole()),
+            roleNames,
             nullToEmpty(user.getStatus()),
             nullToEmpty(user.getAddress()),
             user.getAccessCard() != null ? user.getAccessCard().getId() : null,
@@ -62,9 +75,10 @@ public class DtoMapper {
         user.setPassword(dto.getPassword() != null ? dto.getPassword() : "CHANGE_ME");
         user.setFirstName(dto.getFirstName());
         user.setLastName(dto.getLastName());
-        user.setRole(dto.getRole() != null ? dto.getRole().toUpperCase() : "USER");
         user.setStatus(dto.getStatus() != null ? dto.getStatus().toUpperCase() : "ACTIVE");
         user.setAddress(dto.getAddress());
+        user.setRoles(resolveRoles(dto.getRoles(), true));
+        syncLegacyRole(user);
         
         if (dto.getCardId() != null) {
             accessCardRepository.findById(dto.getCardId()).ifPresent(user::setAccessCard);
@@ -83,9 +97,12 @@ public class DtoMapper {
         if (dto.getPassword() != null) user.setPassword(dto.getPassword());
         if (dto.getFirstName() != null) user.setFirstName(dto.getFirstName());
         if (dto.getLastName() != null) user.setLastName(dto.getLastName());
-        if (dto.getRole() != null) user.setRole(dto.getRole().toUpperCase());
         if (dto.getStatus() != null) user.setStatus(dto.getStatus().toUpperCase());
         if (dto.getAddress() != null) user.setAddress(dto.getAddress());
+        if (dto.getRoles() != null) {
+            user.setRoles(resolveRoles(dto.getRoles(), false));
+            syncLegacyRole(user);
+        }
         
         if (dto.getCardId() != null) {
             if (dto.getCardId() == 0) {
@@ -101,6 +118,49 @@ public class DtoMapper {
                 profileRepository.findById(dto.getProfileId()).ifPresent(user::setProfile);
             }
         }
+    }
+
+    private Set<Role> resolveRoles(Set<String> requestedRoles, boolean applyDefaultUserRole) {
+        Set<String> normalizedRoleNames = new LinkedHashSet<>();
+
+        if (requestedRoles != null) {
+            requestedRoles.stream()
+                .filter(roleName -> roleName != null && !roleName.isBlank())
+                .map(String::toUpperCase)
+                .forEach(normalizedRoleNames::add);
+        }
+
+        if (normalizedRoleNames.isEmpty() && applyDefaultUserRole) {
+            normalizedRoleNames.add("USER");
+        }
+
+        List<Role> resolvedRoles = roleRepository.findByNameInAndDeletedAtIsNull(normalizedRoleNames);
+        Set<String> resolvedRoleNames = resolvedRoles.stream()
+            .map(Role::getName)
+            .map(String::toUpperCase)
+            .collect(Collectors.toSet());
+
+        Set<String> missingRoleNames = normalizedRoleNames.stream()
+            .filter(roleName -> !resolvedRoleNames.contains(roleName))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (!missingRoleNames.isEmpty()) {
+            throw new IllegalArgumentException("Unknown roles: " + String.join(", ", missingRoleNames));
+        }
+
+        return new LinkedHashSet<>(resolvedRoles);
+    }
+
+    private void syncLegacyRole(User user) {
+        String primaryRole = user.getRoles().stream()
+            .map(Role::getName)
+            .filter(roleName -> roleName != null && !roleName.isBlank())
+            .map(String::toUpperCase)
+            .sorted()
+            .findFirst()
+            .orElse("USER");
+
+        user.setRole(primaryRole);
     }
 
     public AccessCardDTO toAccessCardDTO(AccessCard accessCard) {

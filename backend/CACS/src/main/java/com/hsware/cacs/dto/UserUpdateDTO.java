@@ -1,11 +1,12 @@
 package com.hsware.cacs.dto;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -24,10 +25,9 @@ public class UserUpdateDTO {
     
     private String name;
     
-    @Pattern(regexp = "^(ADMIN|RESPONSABLE|USER)$", message = "Role must be ADMIN, RESPONSABLE, or USER")
-    private String role;
-    
-    @Pattern(regexp = "^(ACTIVE|INACTIVE)$", message = "Status must be ACTIVE or INACTIVE")
+    private Set<String> roles;
+
+    @jakarta.validation.constraints.Pattern(regexp = "^(ACTIVE|INACTIVE)$", message = "Status must be ACTIVE or INACTIVE")
     private String status;
     
     @Size(max = 255, message = "Address must not exceed 255 characters")

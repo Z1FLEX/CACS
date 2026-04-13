@@ -8,6 +8,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Set;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,8 +28,7 @@ public class UserCreateDTO {
     
     private String name;
     
-    @Pattern(regexp = "^(ADMIN|RESPONSABLE|USER)$", message = "Role must be ADMIN, RESPONSABLE, or USER")
-    private String role = "USER";
+    private Set<String> roles = Set.of("USER");
     
     @Pattern(regexp = "^(ACTIVE|INACTIVE)$", message = "Status must be ACTIVE or INACTIVE")
     private String status = "ACTIVE";

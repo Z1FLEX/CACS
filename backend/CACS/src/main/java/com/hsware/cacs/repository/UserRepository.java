@@ -9,8 +9,10 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Integer> {
 
+    @EntityGraph(attributePaths = {"roles"})
     List<User> findByDeletedAtIsNull();
 
+    @EntityGraph(attributePaths = {"roles"})
     Optional<User> findByIdAndDeletedAtIsNull(Integer id);
 
     Optional<User> findByAccessCard_Id(Integer accessCardId);

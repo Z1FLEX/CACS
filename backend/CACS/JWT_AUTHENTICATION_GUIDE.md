@@ -18,7 +18,7 @@ This document describes the complete JWT-based stateless authentication system i
 ### Security Configuration
 
 - **Stateless authentication** - No server-side sessions
-- **Role-based authorization** - ADMIN and RESPONSABLE roles
+- **Role-based authorization** - authorities derived from RBAC role assignments
 - **JSON error responses** - Proper 401/403 error handling
 - **CSRF disabled** - Suitable for REST API
 
@@ -45,7 +45,7 @@ Authenticates user with email and password.
   "user": {
     "id": 1,
     "email": "user@example.com",
-    "role": "ADMIN"
+    "roles": ["ADMIN"]
   }
 }
 ```
@@ -95,12 +95,12 @@ Authorization: Bearer <access_token>
 
 ### Access Token
 - **Expiration:** 15 minutes (900,000 milliseconds)
-- **Claims:** userId, email, role
+- **Claims:** userId, roles
 - **Usage:** API requests
 
 ### Refresh Token
 - **Expiration:** 7 days (604,800,000 milliseconds)
-- **Claims:** userId, email, role, type: "refresh"
+- **Claims:** userId, roles, type: "refresh"
 - **Usage:** Token refresh only
 
 ## Role-Based Authorization
@@ -134,9 +134,12 @@ Authorization: Bearer <access_token>
 ### User Entity Fields
 - `email` - Unique identifier for authentication
 - `password` - BCrypt encrypted password
-- `role` - User role (ADMIN, RESPONSABLE, USER)
 - `status` - Account status (ACTIVE, INACTIVE)
 - `deleted_at` - Soft deletion timestamp
+
+### RBAC Tables
+- `roles` - Role catalog managed independently from users
+- `user_roles` - Role assignments for each user
 
 ### Authentication Rules
 - Only users with `status = 'ACTIVE'` can authenticate
@@ -269,8 +272,14 @@ The authentication system can be tested using:
 
 ### Test User Creation
 ```sql
-INSERT INTO users (email, password, first_name, last_name, role, status, created_at)
-VALUES ('test@example.com', '$2a$10$encryptedPassword', 'Test', 'User', 'ADMIN', 'ACTIVE', NOW());
+INSERT INTO users (email, password, first_name, last_name, status, created_at)
+VALUES ('test@example.com', '$2a$10$encryptedPassword', 'Test', 'User', 'ACTIVE', NOW());
+
+INSERT INTO user_roles (user_id, role_id)
+SELECT u.id, r.id
+FROM users u
+JOIN roles r ON r.name = 'ADMIN'
+WHERE u.email = 'test@example.com';
 ```
 
 ## Troubleshooting

@@ -78,7 +78,7 @@ All use integer IDs and soft delete (`deleted_at`) where applicable. CORS is ena
 ## Next steps (when moving beyond CRUD)
 
 - Authentication: JWT login, refresh, revocation (spec: 15 min access, 7 days refresh).
-- RBAC: restrict endpoints by role (ADMIN, RESPONSABLE, USER).
+- RBAC: restrict endpoints by role assignments from `roles` and `user_roles`.
 - Access control service: evaluate card + user + zone + schedule for AUTHORIZED/DENIED.
 - Access log and admin audit log write/read APIs.
 - Redis cache for profiles and zone rules.

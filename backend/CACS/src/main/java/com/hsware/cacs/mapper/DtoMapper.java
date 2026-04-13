@@ -48,10 +48,6 @@ public class DtoMapper {
             .map(String::toUpperCase)
             .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        if (roleNames.isEmpty() && user.getRole() != null && !user.getRole().isBlank()) {
-            roleNames.add(user.getRole().toUpperCase());
-        }
-
         return new UserDTO(
             user.getId(),
             name,
@@ -78,7 +74,6 @@ public class DtoMapper {
         user.setStatus(dto.getStatus() != null ? dto.getStatus().toUpperCase() : "ACTIVE");
         user.setAddress(dto.getAddress());
         user.setRoles(resolveRoles(dto.getRoles(), true));
-        syncLegacyRole(user);
         
         if (dto.getCardId() != null) {
             accessCardRepository.findById(dto.getCardId()).ifPresent(user::setAccessCard);
@@ -99,10 +94,7 @@ public class DtoMapper {
         if (dto.getLastName() != null) user.setLastName(dto.getLastName());
         if (dto.getStatus() != null) user.setStatus(dto.getStatus().toUpperCase());
         if (dto.getAddress() != null) user.setAddress(dto.getAddress());
-        if (dto.getRoles() != null) {
-            user.setRoles(resolveRoles(dto.getRoles(), false));
-            syncLegacyRole(user);
-        }
+        if (dto.getRoles() != null) user.setRoles(resolveRoles(dto.getRoles(), false));
         
         if (dto.getCardId() != null) {
             if (dto.getCardId() == 0) {
@@ -150,19 +142,6 @@ public class DtoMapper {
 
         return new LinkedHashSet<>(resolvedRoles);
     }
-
-    private void syncLegacyRole(User user) {
-        String primaryRole = user.getRoles().stream()
-            .map(Role::getName)
-            .filter(roleName -> roleName != null && !roleName.isBlank())
-            .map(String::toUpperCase)
-            .sorted()
-            .findFirst()
-            .orElse("USER");
-
-        user.setRole(primaryRole);
-    }
-
     public AccessCardDTO toAccessCardDTO(AccessCard accessCard) {
         if (accessCard == null) return null;
         

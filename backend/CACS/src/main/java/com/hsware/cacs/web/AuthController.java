@@ -52,10 +52,6 @@ public class AuthController {
                     .map(role -> role.getName().toUpperCase())
                     .distinct()
                     .collect(Collectors.toList());
-
-            if (roleNames.isEmpty() && user.getRole() != null && !user.getRole().isBlank()) {
-                roleNames = List.of(user.getRole().toUpperCase());
-            }
             
             String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), roleNames);
             String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), roleNames);
@@ -68,7 +64,6 @@ public class AuthController {
             userResponse.put("id", user.getId());
             userResponse.put("email", user.getEmail());
             userResponse.put("roles", roleNames);
-            userResponse.put("role", roleNames.isEmpty() ? null : roleNames.get(0));
             response.put("user", userResponse);
 
             return ResponseEntity.ok(response);

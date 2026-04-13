@@ -28,10 +28,6 @@ public class UserPrincipal implements UserDetails {
             .map(role -> role.getName().toUpperCase())
             .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        if (roleNames.isEmpty() && user.getRole() != null && !user.getRole().isBlank()) {
-            roleNames.add(user.getRole().toUpperCase());
-        }
-
         Set<GrantedAuthority> authorities = roleNames.stream()
             .map(roleName -> new SimpleGrantedAuthority("ROLE_" + roleName))
             .collect(Collectors.toCollection(LinkedHashSet::new));

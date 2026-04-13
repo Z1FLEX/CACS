@@ -84,11 +84,6 @@ public class JwtService {
                 .toList();
         }
 
-        String legacyRole = claims.get("role", String.class);
-        if (legacyRole != null && !legacyRole.isBlank()) {
-            return List.of(legacyRole.toUpperCase());
-        }
-
         return List.of();
     }
 

@@ -38,9 +38,6 @@ public class User {
     @Column(name = "address", length = 255)
     private String address;
 
-    @Column(name = "role", nullable = false, length = 30)
-    private String role; // ADMIN, RESPONSABLE, USER
-
     @Column(name = "status", nullable = false, length = 20)
     private String status; // ACTIVE, INACTIVE
 

@@ -15,4 +15,6 @@ public interface RoleRepository extends JpaRepository<Role, Integer> {
     Optional<Role> findByNameAndDeletedAtIsNull(String name);
 
     List<Role> findByNameInAndDeletedAtIsNull(Iterable<String> names);
+
+    Optional<Role> findByNameIgnoreCase(String name);
 }

@@ -22,4 +22,6 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     /** Users responsible for this zone (zone_responsibility join) */
     java.util.List<User> findByResponsibleZones_IdAndDeletedAtIsNull(Integer zoneId);
+
+    long countByRoles_IdAndDeletedAtIsNull(Integer roleId);
 }

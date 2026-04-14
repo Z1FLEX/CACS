@@ -85,6 +85,10 @@ public class ScheduleService {
 
     @Transactional
     public TimeSlotDTO createTimeSlot(Integer scheduleId, TimeSlotCreateDTO dto) {
+        LocalTime startTime = LocalTime.parse(dto.getStartTime());
+        LocalTime endTime = LocalTime.parse(dto.getEndTime());
+        validateTimeSlotRange(startTime, endTime);
+
         // Find or create the schedule day
         Optional<ScheduleDay> scheduleDayOpt = scheduleDayRepository
                 .findByScheduleIdAndDayIndexAndSchedule_DeletedAtIsNull(scheduleId, dto.getDayIndex());
@@ -107,8 +111,8 @@ public class ScheduleService {
         DayTimeSlot timeSlot = new DayTimeSlot();
         timeSlot.setScheduleDay(scheduleDay);
         timeSlot.setTitle(dto.getTitle() != null && !dto.getTitle().isBlank() ? dto.getTitle().trim() : scheduleDay.getSchedule().getName());
-        timeSlot.setStartTime(LocalTime.parse(dto.getStartTime()));
-        timeSlot.setEndTime(LocalTime.parse(dto.getEndTime()));
+        timeSlot.setStartTime(startTime);
+        timeSlot.setEndTime(endTime);
         timeSlot = dayTimeSlotRepository.save(timeSlot);
 
         return dtoMapper.toTimeSlotDTO(timeSlot);
@@ -120,6 +124,9 @@ public class ScheduleService {
         if (existing.isEmpty()) return Optional.empty();
         
         DayTimeSlot timeSlot = existing.get();
+        LocalTime effectiveStartTime = dto.getStartTime() != null ? LocalTime.parse(dto.getStartTime()) : timeSlot.getStartTime();
+        LocalTime effectiveEndTime = dto.getEndTime() != null ? LocalTime.parse(dto.getEndTime()) : timeSlot.getEndTime();
+        validateTimeSlotRange(effectiveStartTime, effectiveEndTime);
         
         if (dto.getDayIndex() != null && !dto.getDayIndex().equals(timeSlot.getScheduleDay().getDayIndex())) {
             // Move to different day
@@ -141,10 +148,10 @@ public class ScheduleService {
         }
         
         if (dto.getStartTime() != null) {
-            timeSlot.setStartTime(LocalTime.parse(dto.getStartTime()));
+            timeSlot.setStartTime(effectiveStartTime);
         }
         if (dto.getEndTime() != null) {
-            timeSlot.setEndTime(LocalTime.parse(dto.getEndTime()));
+            timeSlot.setEndTime(effectiveEndTime);
         }
         if (dto.getTitle() != null) {
             timeSlot.setTitle(dto.getTitle().isBlank() ? timeSlot.getScheduleDay().getSchedule().getName() : dto.getTitle().trim());
@@ -161,6 +168,12 @@ public class ScheduleService {
         
         dayTimeSlotRepository.delete(existing.get());
         return true;
+    }
+
+    private void validateTimeSlotRange(LocalTime startTime, LocalTime endTime) {
+        if (!endTime.isAfter(startTime)) {
+            throw new IllegalArgumentException("Time slot end time must be after start time; overnight slots are not supported");
+        }
     }
 
 }

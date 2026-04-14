@@ -1,0 +1,157 @@
+package com.hsware.cacs.service;
+
+import com.hsware.cacs.dto.AccessDecisionReasonCode;
+import com.hsware.cacs.dto.AccessDecisionType;
+import com.hsware.cacs.dto.AccessSwipeRequestDTO;
+import com.hsware.cacs.dto.AccessSwipeResponseDTO;
+import com.hsware.cacs.entity.AccessCard;
+import com.hsware.cacs.entity.Device;
+import com.hsware.cacs.entity.Door;
+import com.hsware.cacs.entity.Profile;
+import com.hsware.cacs.entity.User;
+import com.hsware.cacs.entity.Zone;
+import com.hsware.cacs.repository.AccessCardRepository;
+import com.hsware.cacs.repository.DeviceRepository;
+import com.hsware.cacs.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.Set;
+
+@Service
+@RequiredArgsConstructor
+public class AccessDecisionService {
+
+    private final DeviceRepository deviceRepository;
+    private final AccessCardRepository accessCardRepository;
+    private final UserRepository userRepository;
+    private final ScheduleEvaluationService scheduleEvaluationService;
+
+    @Transactional(readOnly = true)
+    public AccessSwipeResponseDTO evaluateSwipe(AccessSwipeRequestDTO request) {
+        Instant occurredAt = request.getOccurredAt() != null ? request.getOccurredAt() : Instant.now();
+        String normalizedCardUid = request.getCardUid().trim();
+
+        Device device = deviceRepository.findWithDoorsAndZonesByIdAndDeletedAtIsNull(request.getDeviceId())
+            .orElse(null);
+        if (device == null) {
+            return deny(request, occurredAt, AccessDecisionReasonCode.DEVICE_NOT_FOUND, "Device not found");
+        }
+
+        if (!"ONLINE".equalsIgnoreCase(device.getStatus())) {
+            return deny(request, occurredAt, AccessDecisionReasonCode.DEVICE_OFFLINE, "Device is offline");
+        }
+
+        Door door = device.getDoors().stream()
+            .filter(candidate -> candidate.getId() != null && candidate.getId().equals(request.getDoorId()))
+            .findFirst()
+            .orElse(null);
+        if (door == null) {
+            return deny(request, occurredAt, AccessDecisionReasonCode.DOOR_NOT_LINKED_TO_DEVICE, "Door is not linked to device");
+        }
+
+        Zone zone = door.getZone();
+        if (zone == null || zone.getDeletedAt() != null) {
+            return deny(request, occurredAt, AccessDecisionReasonCode.DOOR_ZONE_MISSING, "Door does not have an active zone");
+        }
+
+        AccessCard card = accessCardRepository.findByUidAndDeletedAtIsNull(normalizedCardUid)
+            .orElse(null);
+        if (card == null) {
+            return deny(request, occurredAt, AccessDecisionReasonCode.CARD_NOT_FOUND, "Card not found");
+        }
+
+        if ("REVOKED".equalsIgnoreCase(card.getStatus())) {
+            return deny(request, occurredAt, zone.getId(), AccessDecisionReasonCode.CARD_REVOKED, "Card is revoked");
+        }
+
+        if (!"ACTIVE".equalsIgnoreCase(card.getStatus())) {
+            return deny(request, occurredAt, zone.getId(), AccessDecisionReasonCode.CARD_INACTIVE, "Card is inactive");
+        }
+
+        User user = userRepository.findByAccessCard_UidAndAccessCard_DeletedAtIsNullAndDeletedAtIsNull(normalizedCardUid)
+            .orElse(null);
+        if (user == null) {
+            return deny(request, occurredAt, zone.getId(), AccessDecisionReasonCode.USER_NOT_FOUND, "No active user is assigned to this card");
+        }
+
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            return deny(request, occurredAt, zone.getId(), user.getId(), AccessDecisionReasonCode.USER_INACTIVE, "User is inactive");
+        }
+
+        Profile profile = user.getProfile();
+        if (profile == null || profile.getDeletedAt() != null) {
+            return deny(request, occurredAt, zone.getId(), user.getId(), AccessDecisionReasonCode.PROFILE_MISSING, "User does not have an active profile");
+        }
+
+        Set<Zone> allowedZones = profile.getZones();
+        boolean zoneAllowed = allowedZones != null && allowedZones.stream()
+            .anyMatch(allowedZone -> allowedZone.getId() != null
+                && allowedZone.getDeletedAt() == null
+                && allowedZone.getId().equals(zone.getId()));
+        if (!zoneAllowed) {
+            return deny(request, occurredAt, zone.getId(), user.getId(), AccessDecisionReasonCode.ZONE_NOT_ALLOWED, "Profile does not grant access to this zone");
+        }
+
+        boolean withinSchedule = scheduleEvaluationService.isAccessAllowed(profile.getSchedules(), occurredAt);
+        if (!withinSchedule) {
+            return deny(request, occurredAt, zone.getId(), user.getId(), AccessDecisionReasonCode.OUTSIDE_SCHEDULE, "Access is outside allowed schedule");
+        }
+
+        return new AccessSwipeResponseDTO(
+            true,
+            AccessDecisionType.AUTHORIZED,
+            AccessDecisionReasonCode.AUTHORIZED,
+            "Access authorized",
+            request.getDeviceId(),
+            request.getDoorId(),
+            zone.getId(),
+            user.getId(),
+            normalizedCardUid,
+            occurredAt
+        );
+    }
+
+    private AccessSwipeResponseDTO deny(
+        AccessSwipeRequestDTO request,
+        Instant occurredAt,
+        AccessDecisionReasonCode reasonCode,
+        String reasonMessage
+    ) {
+        return deny(request, occurredAt, null, null, reasonCode, reasonMessage);
+    }
+
+    private AccessSwipeResponseDTO deny(
+        AccessSwipeRequestDTO request,
+        Instant occurredAt,
+        Integer zoneId,
+        AccessDecisionReasonCode reasonCode,
+        String reasonMessage
+    ) {
+        return deny(request, occurredAt, zoneId, null, reasonCode, reasonMessage);
+    }
+
+    private AccessSwipeResponseDTO deny(
+        AccessSwipeRequestDTO request,
+        Instant occurredAt,
+        Integer zoneId,
+        Integer userId,
+        AccessDecisionReasonCode reasonCode,
+        String reasonMessage
+    ) {
+        return new AccessSwipeResponseDTO(
+            false,
+            AccessDecisionType.DENIED,
+            reasonCode,
+            reasonMessage,
+            request.getDeviceId(),
+            request.getDoorId(),
+            zoneId,
+            userId,
+            request.getCardUid().trim(),
+            occurredAt
+        );
+    }
+}

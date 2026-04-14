@@ -17,4 +17,7 @@ public interface DeviceRepository extends JpaRepository<Device, Integer> {
 
     @EntityGraph(attributePaths = {"doors", "doors.zone"})
     Optional<Device> findByIdAndDeletedAtIsNullAndStatus(Integer id, String status);
+
+    @EntityGraph(attributePaths = {"doors", "doors.zone"})
+    Optional<Device> findWithDoorsAndZonesByIdAndDeletedAtIsNull(Integer id);
 }

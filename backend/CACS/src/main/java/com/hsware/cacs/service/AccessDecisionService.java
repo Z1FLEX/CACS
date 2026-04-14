@@ -5,12 +5,14 @@ import com.hsware.cacs.dto.AccessDecisionType;
 import com.hsware.cacs.dto.AccessSwipeRequestDTO;
 import com.hsware.cacs.dto.AccessSwipeResponseDTO;
 import com.hsware.cacs.entity.AccessCard;
+import com.hsware.cacs.entity.AccessLog;
 import com.hsware.cacs.entity.Device;
 import com.hsware.cacs.entity.Door;
 import com.hsware.cacs.entity.Profile;
 import com.hsware.cacs.entity.User;
 import com.hsware.cacs.entity.Zone;
 import com.hsware.cacs.repository.AccessCardRepository;
+import com.hsware.cacs.repository.AccessLogRepository;
 import com.hsware.cacs.repository.DeviceRepository;
 import com.hsware.cacs.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,9 +29,10 @@ public class AccessDecisionService {
     private final DeviceRepository deviceRepository;
     private final AccessCardRepository accessCardRepository;
     private final UserRepository userRepository;
+    private final AccessLogRepository accessLogRepository;
     private final ScheduleEvaluationService scheduleEvaluationService;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AccessSwipeResponseDTO evaluateSwipe(AccessSwipeRequestDTO request) {
         Instant occurredAt = request.getOccurredAt() != null ? request.getOccurredAt() : Instant.now();
         String normalizedCardUid = request.getCardUid().trim();
@@ -100,7 +103,7 @@ public class AccessDecisionService {
             return deny(request, occurredAt, zone.getId(), user.getId(), AccessDecisionReasonCode.OUTSIDE_SCHEDULE, "Access is outside allowed schedule");
         }
 
-        return new AccessSwipeResponseDTO(
+        AccessSwipeResponseDTO response = new AccessSwipeResponseDTO(
             true,
             AccessDecisionType.AUTHORIZED,
             AccessDecisionReasonCode.AUTHORIZED,
@@ -112,6 +115,9 @@ public class AccessDecisionService {
             normalizedCardUid,
             occurredAt
         );
+
+        writeAccessLog(response, device, zone);
+        return response;
     }
 
     private AccessSwipeResponseDTO deny(
@@ -141,7 +147,7 @@ public class AccessDecisionService {
         AccessDecisionReasonCode reasonCode,
         String reasonMessage
     ) {
-        return new AccessSwipeResponseDTO(
+        AccessSwipeResponseDTO response = new AccessSwipeResponseDTO(
             false,
             AccessDecisionType.DENIED,
             reasonCode,
@@ -153,5 +159,33 @@ public class AccessDecisionService {
             request.getCardUid().trim(),
             occurredAt
         );
+        Device device = null;
+        if (request.getDeviceId() != null) {
+            device = deviceRepository.findByIdAndDeletedAtIsNull(request.getDeviceId()).orElse(null);
+        }
+        Zone zone = null;
+        if (device != null && request.getDoorId() != null) {
+            zone = device.getDoors().stream()
+                .filter(door -> door.getId() != null && door.getId().equals(request.getDoorId()))
+                .map(Door::getZone)
+                .filter(candidateZone -> candidateZone != null && candidateZone.getDeletedAt() == null)
+                .findFirst()
+                .orElse(null);
+        }
+        writeAccessLog(response, device, zone);
+        return response;
+    }
+
+    private void writeAccessLog(AccessSwipeResponseDTO response, Device device, Zone zone) {
+        AccessLog accessLog = AccessLog.builder()
+            .cardUid(response.getCardUid())
+            .device(device)
+            .zone(zone)
+            .decision(response.getDecision().name())
+            .reason(response.getReasonCode().name())
+            .timestamp(response.getOccurredAt())
+            .build();
+
+        accessLogRepository.save(accessLog);
     }
 }

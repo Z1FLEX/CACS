@@ -1,0 +1,18 @@
+package com.hsware.cacs.dto;
+
+public enum AccessDecisionReasonCode {
+    AUTHORIZED,
+    DEVICE_NOT_FOUND,
+    DEVICE_INACTIVE,
+    DEVICE_OFFLINE,
+    DOOR_NOT_LINKED_TO_DEVICE,
+    DOOR_ZONE_MISSING,
+    CARD_NOT_FOUND,
+    CARD_INACTIVE,
+    CARD_REVOKED,
+    USER_NOT_FOUND,
+    USER_INACTIVE,
+    PROFILE_MISSING,
+    ZONE_NOT_ALLOWED,
+    OUTSIDE_SCHEDULE
+}

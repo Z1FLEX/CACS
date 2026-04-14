@@ -24,4 +24,12 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     java.util.List<User> findByResponsibleZones_IdAndDeletedAtIsNull(Integer zoneId);
 
     long countByRoles_IdAndDeletedAtIsNull(Integer roleId);
+
+    @EntityGraph(attributePaths = {
+        "accessCard",
+        "profile",
+        "profile.zones",
+        "profile.schedules"
+    })
+    Optional<User> findByAccessCard_UidAndAccessCard_DeletedAtIsNullAndDeletedAtIsNull(String cardUid);
 }

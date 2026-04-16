@@ -14,6 +14,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/custom/button'
 import { SelectDropdown } from '@/components/select-dropdown'
+import { toast } from '@/components/ui/use-toast'
 import type { Zone } from '@/types/scas'
 import { addZone, updateZone, zoneTypeForUi, zoneTypeNameToId } from '@/services'
 
@@ -74,28 +75,45 @@ export default function AddZoneDialog({ open, onOpenChange, current }: Props) {
 
   const onSubmit = async (vals: FormValues) => {
     const tid = zoneTypeNameToId(vals.zoneType)
-    if (current) {
-      const updated = {
-        ...current,
-        name: vals.name,
-        location: vals.location || '',
-        manager: vals.manager || undefined,
-        zoneType: { name: vals.zoneType, level: typeToLevel[vals.zoneType] },
-        ...(tid != null ? { zoneTypeId: String(tid) } : {}),
+    try {
+      if (current) {
+        const updated = {
+          ...current,
+          name: vals.name,
+          location: vals.location || '',
+          manager: vals.manager || undefined,
+          zoneType: { name: vals.zoneType, level: typeToLevel[vals.zoneType] },
+          ...(tid != null ? { zoneTypeId: String(tid) } : {}),
+        }
+        await updateZone(updated)
+        toast({
+          title: 'Zone updated',
+          description: `${vals.name} was updated successfully.`,
+        })
+      } else {
+        await addZone({
+          id: '',
+          name: vals.name,
+          location: vals.location || '',
+          zoneType: { name: vals.zoneType, level: typeToLevel[vals.zoneType] },
+          ...(tid != null ? { zoneTypeId: String(tid) } : {}),
+        })
+        toast({
+          title: 'Zone created',
+          description: `${vals.name} was created successfully.`,
+        })
       }
-      await updateZone(updated)
-    } else {
-      await addZone({
-        id: '',
-        name: vals.name,
-        location: vals.location || '',
-        zoneType: { name: vals.zoneType, level: typeToLevel[vals.zoneType] },
-        ...(tid != null ? { zoneTypeId: String(tid) } : {}),
+
+      form.reset()
+      onOpenChange(false)
+    } catch (error) {
+      console.error(`Failed to ${current ? 'update' : 'create'} zone:`, error)
+      toast({
+        title: current ? 'Error updating zone' : 'Error creating zone',
+        description: 'Please check the zone details and try again.',
+        variant: 'destructive',
       })
     }
-
-    form.reset()
-    onOpenChange(false)
   }
 
   return (

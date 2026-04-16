@@ -30,7 +30,11 @@ function normalizeUser(u: any): User {
     cardId: u.cardId != null ? String(u.cardId) : undefined,
     profileId: u.profileId != null ? String(u.profileId) : undefined,
     status: (u.status || 'ACTIVE').toUpperCase(),
-    role: (u.role || 'USER').toUpperCase(),
+    role: (
+      (Array.isArray(u.roles) && u.roles.length > 0 ? u.roles[0] : null) ||
+      u.role ||
+      'USER'
+    ).toUpperCase(),
     name: u.name || [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email,
     createdAt,
   }
@@ -65,7 +69,7 @@ function userToCreateBody(user: Partial<User>): Record<string, unknown> {
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
-    role: user.role,
+    roles: user.role ? [user.role] : ['USER'],
     status: user.status,
     address: user.address,
     cardId: cardIdNum,
@@ -81,7 +85,11 @@ export async function addUser(user: Partial<User>): Promise<void> {
 
 /** Build JSON body for PUT /api/users — backend expects numeric cardId; 0 clears access_card_id */
 function userToApiBody(user: User): Record<string, unknown> {
-  const body: Record<string, unknown> = { ...user }
+  const body: Record<string, unknown> = {
+    ...user,
+    roles: user.role ? [user.role] : ['USER'],
+  }
+  delete body.role
   if (body.cardId !== undefined && body.cardId !== null && body.cardId !== '') {
     const n = Number(body.cardId)
     if (!Number.isNaN(n)) body.cardId = n

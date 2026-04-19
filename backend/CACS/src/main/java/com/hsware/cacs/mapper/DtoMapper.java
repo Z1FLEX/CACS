@@ -48,6 +48,12 @@ public class DtoMapper {
             .map(String::toUpperCase)
             .collect(Collectors.toCollection(LinkedHashSet::new));
 
+        Set<Integer> profileIds = user.getProfiles().stream()
+            .map(Profile::getId)
+            .filter(id -> id != null)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        Integer primaryProfileId = profileIds.stream().findFirst().orElse(null);
+
         return new UserDTO(
             user.getId(),
             name,
@@ -58,7 +64,8 @@ public class DtoMapper {
             nullToEmpty(user.getStatus()),
             nullToEmpty(user.getAddress()),
             user.getAccessCard() != null ? user.getAccessCard().getId() : null,
-            user.getProfile() != null ? user.getProfile().getId() : null,
+            primaryProfileId,
+            profileIds,
             user.getCreatedAt()
         );
     }
@@ -78,9 +85,7 @@ public class DtoMapper {
         if (dto.getCardId() != null) {
             accessCardRepository.findById(dto.getCardId()).ifPresent(user::setAccessCard);
         }
-        if (dto.getProfileId() != null) {
-            profileRepository.findById(dto.getProfileId()).ifPresent(user::setProfile);
-        }
+        user.setProfiles(resolveProfiles(dto.getProfileIds(), dto.getProfileId(), false));
         
         return user;
     }
@@ -103,13 +108,46 @@ public class DtoMapper {
                 accessCardRepository.findById(dto.getCardId()).ifPresent(user::setAccessCard);
             }
         }
-        if (dto.getProfileId() != null) {
-            if (dto.getProfileId() == 0) {
-                user.setProfile(null);
-            } else {
-                profileRepository.findById(dto.getProfileId()).ifPresent(user::setProfile);
-            }
+        boolean hasProfileIdsField = dto.getProfileIds() != null;
+        boolean hasProfileIdField = dto.getProfileId() != null;
+        if (hasProfileIdsField || hasProfileIdField) {
+            user.setProfiles(resolveProfiles(dto.getProfileIds(), dto.getProfileId(), true));
         }
+    }
+
+    private Set<Profile> resolveProfiles(Set<Integer> profileIds, Integer legacyProfileId, boolean allowClearWithZero) {
+        Set<Integer> normalizedProfileIds = new LinkedHashSet<>();
+
+        if (profileIds != null) {
+            normalizedProfileIds.addAll(profileIds);
+        }
+
+        if (legacyProfileId != null) {
+            normalizedProfileIds.add(legacyProfileId);
+        }
+
+        if (allowClearWithZero && normalizedProfileIds.contains(0)) {
+            return new LinkedHashSet<>();
+        }
+        normalizedProfileIds.remove(0);
+
+        if (normalizedProfileIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+
+        List<Profile> resolvedProfiles = profileRepository.findAllById(normalizedProfileIds).stream()
+            .filter(profile -> profile.getDeletedAt() == null)
+            .toList();
+        Set<Integer> resolvedIds = resolvedProfiles.stream().map(Profile::getId).collect(Collectors.toSet());
+
+        Set<Integer> missingProfileIds = normalizedProfileIds.stream()
+            .filter(profileId -> !resolvedIds.contains(profileId))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (!missingProfileIds.isEmpty()) {
+            throw new IllegalArgumentException("Unknown profiles: " + missingProfileIds);
+        }
+
+        return new LinkedHashSet<>(resolvedProfiles);
     }
 
     private Set<Role> resolveRoles(Set<String> requestedRoles, boolean applyDefaultUserRole) {

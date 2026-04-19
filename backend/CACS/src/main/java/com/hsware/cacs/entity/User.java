@@ -45,9 +45,14 @@ public class User {
     @JoinColumn(name = "access_card_id", unique = true)
     private AccessCard accessCard;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "profile_id")
-    private Profile profile;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "user_profile",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "profile_id")
+    )
+    @Builder.Default
+    private Set<Profile> profiles = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "photo_id")

@@ -29,6 +29,11 @@ function normalizeUser(u: any): User {
     id: String(u.id),
     cardId: u.cardId != null ? String(u.cardId) : undefined,
     profileId: u.profileId != null ? String(u.profileId) : undefined,
+    profileIds: Array.isArray(u.profileIds)
+      ? u.profileIds.map((p: unknown) => String(p))
+      : u.profileId != null
+        ? [String(u.profileId)]
+        : undefined,
     status: (u.status || 'ACTIVE').toUpperCase(),
     role: (
       (Array.isArray(u.roles) && u.roles.length > 0 ? u.roles[0] : null) ||
@@ -63,6 +68,11 @@ function userToCreateBody(user: Partial<User>): Record<string, unknown> {
     user.profileId != null && user.profileId !== '' && !Number.isNaN(Number(user.profileId))
       ? Number(user.profileId)
       : undefined
+  const profileIdsNum = Array.isArray(user.profileIds)
+    ? user.profileIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id))
+    : []
 
   return {
     name: user.name,
@@ -74,6 +84,7 @@ function userToCreateBody(user: Partial<User>): Record<string, unknown> {
     address: user.address,
     cardId: cardIdNum,
     profileId: profileIdNum,
+    profileIds: profileIdsNum.length > 0 ? profileIdsNum : undefined,
     photo: user.photo,
   }
 }
@@ -93,6 +104,15 @@ function userToApiBody(user: User): Record<string, unknown> {
   if (body.cardId !== undefined && body.cardId !== null && body.cardId !== '') {
     const n = Number(body.cardId)
     if (!Number.isNaN(n)) body.cardId = n
+  }
+  if (Array.isArray(user.profileIds)) {
+    const ids = user.profileIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id))
+    body.profileIds = ids
+  } else if (user.profileId !== undefined && user.profileId !== null && user.profileId !== '') {
+    const n = Number(user.profileId)
+    if (!Number.isNaN(n)) body.profileId = n
   }
   return body
 }

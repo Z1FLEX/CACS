@@ -46,4 +46,8 @@ public class Profile {
     )
     @Builder.Default
     private Set<Zone> zones = new HashSet<>();
+
+    @ManyToMany(mappedBy = "profiles", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<User> users = new HashSet<>();
 }

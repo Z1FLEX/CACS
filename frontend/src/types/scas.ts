@@ -47,6 +47,8 @@ export interface User {
   photo?: string
   /** Resolved profile id if needed */
   profileId?: string | null
+  /** Multi-profile support (M:N user_profile). profileId remains legacy-compatible. */
+  profileIds?: string[]
 }
 
 // ---------------------------------------------------------------------------

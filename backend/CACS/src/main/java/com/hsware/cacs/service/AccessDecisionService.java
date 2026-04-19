@@ -9,6 +9,7 @@ import com.hsware.cacs.entity.AccessLog;
 import com.hsware.cacs.entity.Device;
 import com.hsware.cacs.entity.Door;
 import com.hsware.cacs.entity.Profile;
+import com.hsware.cacs.entity.Schedule;
 import com.hsware.cacs.entity.User;
 import com.hsware.cacs.entity.Zone;
 import com.hsware.cacs.repository.AccessCardRepository;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -84,12 +86,16 @@ public class AccessDecisionService {
             return deny(request, occurredAt, zone.getId(), user.getId(), AccessDecisionReasonCode.USER_INACTIVE, "User is inactive");
         }
 
-        Profile profile = user.getProfile();
-        if (profile == null || profile.getDeletedAt() != null) {
+        Set<Profile> activeProfiles = user.getProfiles().stream()
+            .filter(profile -> profile.getDeletedAt() == null)
+            .collect(Collectors.toSet());
+        if (activeProfiles.isEmpty()) {
             return deny(request, occurredAt, zone.getId(), user.getId(), AccessDecisionReasonCode.PROFILE_MISSING, "User does not have an active profile");
         }
 
-        Set<Zone> allowedZones = profile.getZones();
+        Set<Zone> allowedZones = activeProfiles.stream()
+            .flatMap(profile -> profile.getZones().stream())
+            .collect(Collectors.toSet());
         boolean zoneAllowed = allowedZones != null && allowedZones.stream()
             .anyMatch(allowedZone -> allowedZone.getId() != null
                 && allowedZone.getDeletedAt() == null
@@ -98,7 +104,10 @@ public class AccessDecisionService {
             return deny(request, occurredAt, zone.getId(), user.getId(), AccessDecisionReasonCode.ZONE_NOT_ALLOWED, "Profile does not grant access to this zone");
         }
 
-        boolean withinSchedule = scheduleEvaluationService.isAccessAllowed(profile.getSchedules(), occurredAt);
+        Set<Schedule> allowedSchedules = activeProfiles.stream()
+            .flatMap(profile -> profile.getSchedules().stream())
+            .collect(Collectors.toSet());
+        boolean withinSchedule = scheduleEvaluationService.isAccessAllowed(allowedSchedules, occurredAt);
         if (!withinSchedule) {
             return deny(request, occurredAt, zone.getId(), user.getId(), AccessDecisionReasonCode.OUTSIDE_SCHEDULE, "Access is outside allowed schedule");
         }

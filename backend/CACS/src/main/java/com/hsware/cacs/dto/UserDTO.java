@@ -21,12 +21,10 @@ public class UserDTO extends BaseDTO {
     private String status;
     private String address;
     private Integer cardId;
-    /** Legacy single-profile field kept for backward compatibility */
-    private Integer profileId;
     private Set<Integer> profileIds;
     
     public UserDTO(Integer id, String name, String firstName, String lastName, String email, 
-                   Set<String> roles, String status, String address, Integer cardId, Integer profileId, Set<Integer> profileIds, Instant createdAt) {
+                   Set<String> roles, String status, String address, Integer cardId, Set<Integer> profileIds, Instant createdAt) {
         this.id = id;
         this.name = name;
         this.firstName = firstName;
@@ -36,7 +34,6 @@ public class UserDTO extends BaseDTO {
         this.status = status;
         this.address = address;
         this.cardId = cardId;
-        this.profileId = profileId;
         this.profileIds = profileIds;
         this.createdAt = createdAt;
     }

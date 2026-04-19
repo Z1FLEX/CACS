@@ -45,9 +45,7 @@ export interface User {
   role: 'ADMIN' | 'RESPONSABLE' | 'USER'
   cardId?: string | null
   photo?: string
-  /** Resolved profile id if needed */
-  profileId?: string | null
-  /** Multi-profile support (M:N user_profile). profileId remains legacy-compatible. */
+  /** Multi-profile support (M:N user_profile). */
   profileIds?: string[]
 }
 

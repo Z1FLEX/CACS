@@ -52,7 +52,6 @@ public class DtoMapper {
             .map(Profile::getId)
             .filter(id -> id != null)
             .collect(Collectors.toCollection(LinkedHashSet::new));
-        Integer primaryProfileId = profileIds.stream().findFirst().orElse(null);
 
         return new UserDTO(
             user.getId(),
@@ -64,7 +63,6 @@ public class DtoMapper {
             nullToEmpty(user.getStatus()),
             nullToEmpty(user.getAddress()),
             user.getAccessCard() != null ? user.getAccessCard().getId() : null,
-            primaryProfileId,
             profileIds,
             user.getCreatedAt()
         );
@@ -85,7 +83,7 @@ public class DtoMapper {
         if (dto.getCardId() != null) {
             accessCardRepository.findById(dto.getCardId()).ifPresent(user::setAccessCard);
         }
-        user.setProfiles(resolveProfiles(dto.getProfileIds(), dto.getProfileId(), false));
+        user.setProfiles(resolveProfiles(dto.getProfileIds(), false));
         
         return user;
     }
@@ -108,22 +106,16 @@ public class DtoMapper {
                 accessCardRepository.findById(dto.getCardId()).ifPresent(user::setAccessCard);
             }
         }
-        boolean hasProfileIdsField = dto.getProfileIds() != null;
-        boolean hasProfileIdField = dto.getProfileId() != null;
-        if (hasProfileIdsField || hasProfileIdField) {
-            user.setProfiles(resolveProfiles(dto.getProfileIds(), dto.getProfileId(), true));
+        if (dto.getProfileIds() != null) {
+            user.setProfiles(resolveProfiles(dto.getProfileIds(), true));
         }
     }
 
-    private Set<Profile> resolveProfiles(Set<Integer> profileIds, Integer legacyProfileId, boolean allowClearWithZero) {
+    private Set<Profile> resolveProfiles(Set<Integer> profileIds, boolean allowClearWithZero) {
         Set<Integer> normalizedProfileIds = new LinkedHashSet<>();
 
         if (profileIds != null) {
             normalizedProfileIds.addAll(profileIds);
-        }
-
-        if (legacyProfileId != null) {
-            normalizedProfileIds.add(legacyProfileId);
         }
 
         if (allowClearWithZero && normalizedProfileIds.contains(0)) {

@@ -34,7 +34,5 @@ public class UserUpdateDTO {
     private String address;
     
     private Integer cardId;
-    /** Legacy single-profile field kept for backward compatibility */
-    private Integer profileId;
     private Set<Integer> profileIds;
 }

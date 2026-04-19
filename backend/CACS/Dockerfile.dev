@@ -1,0 +1,22 @@
+# Development Dockerfile with hot reload support
+FROM maven:3.9.9-eclipse-temurin-21
+
+WORKDIR /app
+
+# Copy configuration files first to leverage Docker cache for dependencies
+COPY pom.xml mvnw ./
+COPY .mvn .mvn
+RUN chmod +x mvnw
+
+# Install dependencies and compile
+RUN ./mvnw compile
+
+# Install curl for healthcheck support
+RUN apt-get update && \
+    apt-get install -y curl && \
+    rm -rf /var/lib/apt/lists/*
+
+EXPOSE 8080
+
+# Start the application in development mode with spring-boot-devtools for hot reload
+CMD ["./mvnw", "spring-boot:run", "-Dspring-boot.run.jvmArguments=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"]

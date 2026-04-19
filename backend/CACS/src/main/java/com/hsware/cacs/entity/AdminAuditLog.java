@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.net.InetAddress;
 
 @Entity
 @Table(name = "admin_audit_log")
@@ -31,8 +32,8 @@ public class AdminAuditLog {
     @Column(name = "target_id")
     private Integer targetId;
 
-    @Column(name = "ip_source", length = 45)
-    private String ipSource;
+    @Column(name = "ip_source")
+    private InetAddress ipSource;
 
     @Column(name = "timestamp")
     private Instant timestamp;

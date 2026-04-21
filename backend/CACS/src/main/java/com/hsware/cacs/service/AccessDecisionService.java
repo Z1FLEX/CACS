@@ -38,6 +38,7 @@ public class AccessDecisionService {
     public AccessSwipeResponseDTO evaluateSwipe(AccessSwipeRequestDTO request) {
         Instant occurredAt = request.getOccurredAt() != null ? request.getOccurredAt() : Instant.now();
         String normalizedCardUid = request.getCardUid().trim();
+        String cardHash = CardHashingService.sha256(normalizedCardUid);
 
         Device device = deviceRepository.findWithDoorsAndZonesByIdAndDeletedAtIsNull(request.getDeviceId())
             .orElse(null);
@@ -62,7 +63,7 @@ public class AccessDecisionService {
             return deny(request, occurredAt, AccessDecisionReasonCode.DOOR_ZONE_MISSING, "Door does not have an active zone");
         }
 
-        AccessCard card = accessCardRepository.findByUidAndDeletedAtIsNull(normalizedCardUid)
+        AccessCard card = accessCardRepository.findByNumAndDeletedAtIsNull(cardHash)
             .orElse(null);
         if (card == null) {
             return deny(request, occurredAt, AccessDecisionReasonCode.CARD_NOT_FOUND, "Card not found");
@@ -76,7 +77,7 @@ public class AccessDecisionService {
             return deny(request, occurredAt, zone.getId(), AccessDecisionReasonCode.CARD_INACTIVE, "Card is inactive");
         }
 
-        User user = userRepository.findByAccessCard_UidAndAccessCard_DeletedAtIsNullAndDeletedAtIsNull(normalizedCardUid)
+        User user = userRepository.findByAccessCard_NumAndAccessCard_DeletedAtIsNullAndDeletedAtIsNull(cardHash)
             .orElse(null);
         if (user == null) {
             return deny(request, occurredAt, zone.getId(), AccessDecisionReasonCode.USER_NOT_FOUND, "No active user is assigned to this card");

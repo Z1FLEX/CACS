@@ -12,6 +12,7 @@ import com.hsware.cacs.repository.ScheduleRepository;
 import com.hsware.cacs.repository.UserRepository;
 import com.hsware.cacs.repository.ZoneRepository;
 import com.hsware.cacs.repository.ZoneTypeRepository;
+import com.hsware.cacs.service.CardHashingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,7 +51,8 @@ class DtoMapperUserRolesTest {
             zoneTypeRepository,
             doorRepository,
             userRepository,
-            scheduleRepository
+            scheduleRepository,
+            new CardHashingService()
         );
     }
 

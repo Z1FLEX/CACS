@@ -18,10 +18,10 @@ public class AccessCard {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "uid", nullable = false, unique = true, length = 100)
+    @Column(name = "uid", length = 100)
     private String uid;
 
-    @Column(name = "num", length = 100)
+    @Column(name = "num", nullable = false, length = 64)
     private String num;
 
     @Column(name = "status", nullable = false, length = 20)
@@ -32,4 +32,11 @@ public class AccessCard {
 
     @Column(name = "created_at")
     private Instant createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+    }
 }

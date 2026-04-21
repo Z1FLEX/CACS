@@ -27,9 +27,9 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     @EntityGraph(attributePaths = {
         "accessCard",
-        "profile",
-        "profile.zones",
-        "profile.schedules"
+        "profiles",
+        "profiles.zones",
+        "profiles.schedules"
     })
-    Optional<User> findByAccessCard_UidAndAccessCard_DeletedAtIsNullAndDeletedAtIsNull(String cardUid);
+    Optional<User> findByAccessCard_NumAndAccessCard_DeletedAtIsNullAndDeletedAtIsNull(String cardHash);
 }

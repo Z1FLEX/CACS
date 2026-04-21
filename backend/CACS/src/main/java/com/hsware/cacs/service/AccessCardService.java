@@ -4,10 +4,8 @@ import com.hsware.cacs.dto.AccessCardDTO;
 import com.hsware.cacs.dto.AccessCardCreateDTO;
 import com.hsware.cacs.dto.AccessCardUpdateDTO;
 import com.hsware.cacs.entity.AccessCard;
-import com.hsware.cacs.entity.User;
 import com.hsware.cacs.mapper.DtoMapper;
 import com.hsware.cacs.repository.AccessCardRepository;
-import com.hsware.cacs.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +19,6 @@ import java.util.stream.Collectors;
 public class AccessCardService {
 
     private final AccessCardRepository accessCardRepository;
-    private final UserRepository userRepository;
     private final DtoMapper dtoMapper;
 
     @Transactional(readOnly = true)
@@ -39,6 +36,9 @@ public class AccessCardService {
     @Transactional
     public AccessCardDTO create(AccessCardCreateDTO accessCardCreateDTO) {
         AccessCard accessCard = dtoMapper.toAccessCard(accessCardCreateDTO);
+        if (accessCardRepository.existsByNumAndDeletedAtIsNull(accessCard.getNum())) {
+            throw new IllegalArgumentException("Card already exists");
+        }
         accessCard = accessCardRepository.save(accessCard);
         return dtoMapper.toAccessCardDTO(accessCard);
     }
@@ -49,6 +49,9 @@ public class AccessCardService {
         if (existing.isEmpty()) return Optional.empty();
         AccessCard accessCard = existing.get();
         dtoMapper.updateAccessCardFromDTO(accessCardUpdateDTO, accessCard);
+        if (accessCardRepository.existsByNumAndDeletedAtIsNullAndIdNot(accessCard.getNum(), id)) {
+            throw new IllegalArgumentException("Card already exists");
+        }
         accessCard = accessCardRepository.save(accessCard);
         return Optional.of(dtoMapper.toAccessCardDTO(accessCard));
     }

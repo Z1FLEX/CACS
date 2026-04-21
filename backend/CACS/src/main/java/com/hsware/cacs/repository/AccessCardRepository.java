@@ -12,5 +12,9 @@ public interface AccessCardRepository extends JpaRepository<AccessCard, Integer>
 
     Optional<AccessCard> findByIdAndDeletedAtIsNull(Integer id);
 
-    Optional<AccessCard> findByUidAndDeletedAtIsNull(String uid);
+    Optional<AccessCard> findByNumAndDeletedAtIsNull(String num);
+
+    boolean existsByNumAndDeletedAtIsNull(String num);
+
+    boolean existsByNumAndDeletedAtIsNullAndIdNot(String num, Integer id);
 }

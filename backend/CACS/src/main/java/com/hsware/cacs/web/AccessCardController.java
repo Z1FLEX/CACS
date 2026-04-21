@@ -4,6 +4,7 @@ import com.hsware.cacs.dto.AccessCardDTO;
 import com.hsware.cacs.dto.AccessCardCreateDTO;
 import com.hsware.cacs.dto.AccessCardUpdateDTO;
 import com.hsware.cacs.service.AccessCardService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,13 +33,13 @@ public class AccessCardController {
     }
 
     @PostMapping
-    public ResponseEntity<AccessCardDTO> create(@RequestBody AccessCardCreateDTO body) {
+    public ResponseEntity<AccessCardDTO> create(@Valid @RequestBody AccessCardCreateDTO body) {
         AccessCardDTO created = accessCardService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AccessCardDTO> update(@PathVariable Integer id, @RequestBody AccessCardUpdateDTO body) {
+    public ResponseEntity<AccessCardDTO> update(@PathVariable Integer id, @Valid @RequestBody AccessCardUpdateDTO body) {
         return accessCardService.update(id, body)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

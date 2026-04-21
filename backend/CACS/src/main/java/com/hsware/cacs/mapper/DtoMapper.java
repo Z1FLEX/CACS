@@ -10,6 +10,7 @@ import com.hsware.cacs.repository.ScheduleRepository;
 import com.hsware.cacs.repository.UserRepository;
 import com.hsware.cacs.repository.ZoneRepository;
 import com.hsware.cacs.repository.ZoneTypeRepository;
+import com.hsware.cacs.service.CardHashingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +34,7 @@ public class DtoMapper {
     private final DoorRepository doorRepository;
     private final UserRepository userRepository;
     private final ScheduleRepository scheduleRepository;
+    private final CardHashingService cardHashingService;
 
     public UserDTO toUserDTO(User user) {
         if (user == null) return null;
@@ -196,7 +198,7 @@ public class DtoMapper {
         
         return new AccessCardDTO(
             accessCard.getId(),
-            nullToEmpty(accessCard.getUid()),
+            "",
             nullToEmpty(accessCard.getNum()),
             nullToEmpty(accessCard.getStatus()),
             userId,
@@ -209,8 +211,8 @@ public class DtoMapper {
         if (dto == null) return null;
         
         AccessCard accessCard = new AccessCard();
-        accessCard.setUid(dto.getUid());
-        accessCard.setNum(dto.getNum());
+        accessCard.setUid(null);
+        accessCard.setNum(cardHashingService.hash(dto.getUid()));
         accessCard.setStatus(dto.getStatus() != null ? dto.getStatus().toUpperCase() : "ACTIVE");
         
         return accessCard;
@@ -219,8 +221,10 @@ public class DtoMapper {
     public void updateAccessCardFromDTO(AccessCardUpdateDTO dto, AccessCard accessCard) {
         if (dto == null || accessCard == null) return;
         
-        if (dto.getUid() != null) accessCard.setUid(dto.getUid());
-        if (dto.getNum() != null) accessCard.setNum(dto.getNum());
+        if (dto.getUid() != null) {
+            accessCard.setUid(null);
+            accessCard.setNum(cardHashingService.hash(dto.getUid()));
+        }
         if (dto.getStatus() != null) accessCard.setStatus(dto.getStatus().toUpperCase());
     }
 

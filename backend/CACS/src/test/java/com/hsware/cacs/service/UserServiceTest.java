@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -58,5 +59,25 @@ class UserServiceTest {
 
         assertThat(previousCard.getStatus()).isEqualTo("INACTIVE");
         assertThat(nextCard.getStatus()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void updateRejectsCardAlreadyAssignedToAnotherUser() {
+        AccessCard nextCard = AccessCard.builder().id(2).status("INACTIVE").build();
+        User currentUser = User.builder().id(10).status("ACTIVE").build();
+        User assignedUser = User.builder().id(99).accessCard(nextCard).status("ACTIVE").build();
+
+        when(userRepository.findByIdAndDeletedAtIsNull(10)).thenReturn(Optional.of(currentUser));
+        doAnswer(invocation -> {
+            User managedUser = invocation.getArgument(1);
+            managedUser.setAccessCard(nextCard);
+            return null;
+        }).when(dtoMapper).updateUserFromDTO(any(UserUpdateDTO.class), any(User.class));
+        when(accessCardRepository.findByIdAndDeletedAtIsNull(2)).thenReturn(Optional.of(nextCard));
+        when(userRepository.findByAccessCard_IdAndDeletedAtIsNull(2)).thenReturn(Optional.of(assignedUser));
+
+        assertThatThrownBy(() -> userService.update(10, new UserUpdateDTO()))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("This card is already assigned to another user");
     }
 }

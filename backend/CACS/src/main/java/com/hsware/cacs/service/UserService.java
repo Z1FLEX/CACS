@@ -39,7 +39,7 @@ public class UserService {
     @Transactional
     public UserDTO create(UserCreateDTO userCreateDTO) {
         User user = dtoMapper.toUser(userCreateDTO);
-        synchronizeCardState(null, user.getAccessCard());
+        synchronizeCardState(user, null, user.getAccessCard());
         user = userRepository.save(user);
         return dtoMapper.toUserDTO(user);
     }
@@ -51,7 +51,7 @@ public class UserService {
         User user = existing.get();
         AccessCard previousCard = user.getAccessCard();
         dtoMapper.updateUserFromDTO(userUpdateDTO, user);
-        synchronizeCardState(previousCard, user.getAccessCard());
+        synchronizeCardState(user, previousCard, user.getAccessCard());
         user = userRepository.save(user);
         return Optional.of(dtoMapper.toUserDTO(user));
     }
@@ -61,7 +61,7 @@ public class UserService {
         Optional<User> existing = userRepository.findByIdAndDeletedAtIsNull(id);
         if (existing.isEmpty()) return false;
         User u = existing.get();
-        synchronizeCardState(u.getAccessCard(), null);
+        synchronizeCardState(u, u.getAccessCard(), null);
         u.setAccessCard(null);
         u.setDeletedAt(java.time.Instant.now());
         u.setStatus("INACTIVE");
@@ -69,7 +69,7 @@ public class UserService {
         return true;
     }
 
-    private void synchronizeCardState(AccessCard previousCard, AccessCard nextCard) {
+    private void synchronizeCardState(User currentUser, AccessCard previousCard, AccessCard nextCard) {
         if (previousCard != null && (nextCard == null || !previousCard.getId().equals(nextCard.getId()))) {
             previousCard.setStatus("INACTIVE");
             accessCardRepository.save(previousCard);
@@ -78,6 +78,13 @@ public class UserService {
         if (nextCard != null) {
             AccessCard managedCard = accessCardRepository.findByIdAndDeletedAtIsNull(nextCard.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Assigned card not found"));
+            User assignedUser = userRepository.findByAccessCard_IdAndDeletedAtIsNull(managedCard.getId()).orElse(null);
+
+            if (assignedUser != null
+                && currentUser.getId() != null
+                && !assignedUser.getId().equals(currentUser.getId())) {
+                throw new IllegalArgumentException("This card is already assigned to another user");
+            }
 
             if (managedCard.getDeletedAt() != null) {
                 throw new IllegalArgumentException("Assigned card is not available");

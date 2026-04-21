@@ -22,6 +22,9 @@ function normalizeDoor(d: unknown): Door {
     ...door, 
     id: String(door.id), 
     zoneId: String(door.zoneId ?? ''),
+    deviceId: door.deviceId != null ? String(door.deviceId) : undefined,
+    deviceName: typeof door.deviceName === 'string' ? door.deviceName : '',
+    relayIndex: typeof door.relayIndex === 'number' ? door.relayIndex : undefined,
     name: String(door.name ?? '')
   }
 }
@@ -39,13 +42,13 @@ export function subscribeDoors(cb: DoorSubscriber): () => void {
   return storeSubscribeDoors(cb)
 }
 
-export async function addDoor(door: Door): Promise<void> {
-  await apiCreateDoor(door)
+export async function addDoor(payload: Record<string, unknown>): Promise<void> {
+  await apiCreateDoor(payload as Partial<Door>)
   await loadDoors()
 }
 
-export async function updateDoor(id: string, payload: Partial<Door>): Promise<void> {
-  await apiUpdateDoor(id, payload)
+export async function updateDoor(id: string, payload: Record<string, unknown>): Promise<void> {
+  await apiUpdateDoor(id, payload as Partial<Door>)
   await loadDoors()
 }
 

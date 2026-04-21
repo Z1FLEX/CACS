@@ -104,6 +104,9 @@ export interface Door {
   zoneId: string
   zoneName?: string
   location?: string
+  deviceId?: string
+  deviceName?: string
+  relayIndex?: number
   createdAt?: string
   deletedAt?: string | null
 }

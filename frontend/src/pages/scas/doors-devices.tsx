@@ -8,7 +8,6 @@ import type { Door, Device, Zone } from '@/types/scas'
 import { DeviceType, type DeviceCreateDTO } from '@/types/device'
 import { subscribeDoors, getDoors, loadDoors, removeDoor, subscribeDevices, getDevices, loadDevices, removeDevice, addDoor, addDevice, subscribeZones, loadZones, getZones } from '@/services'
 import AddDoorDialog from './components/add-door-dialog'
-import DoorZoneAssignModal from './components/door-zone-assign-modal'
 import AddDeviceDialog from './components/add-device-dialog'
 import DeviceAssignmentDialog from './components/device-assignment-dialog'
 import CSVImportDialog from '@/components/custom/csv-import-dialog'
@@ -17,6 +16,8 @@ import { IconPlus, IconEdit, IconTrash, IconUpload, IconLink } from '@tabler/ico
 const doorColumns: ColumnConfig[] = [
   { key: 'name', label: 'Door Name', visible: true },
   { key: 'zoneName', label: 'Zone', visible: true },
+  { key: 'deviceName', label: 'Device', visible: true },
+  { key: 'relayIndex', label: 'Relay', visible: true },
   { key: 'actions', label: 'Actions', visible: true },
 ]
 
@@ -38,8 +39,6 @@ export default function DoorsDevicesPage() {
   const [importDoorOpen, setImportDoorOpen] = useState(false)
   const [importDeviceOpen, setImportDeviceOpen] = useState(false)
   const [currentDoor, setCurrentDoor] = useState<any | null>(null)
-  const [zoneAssignDoor, setZoneAssignDoor] = useState<Door | null>(null)
-  const [openZoneAssign, setOpenZoneAssign] = useState(false)
   const [currentDevice, setCurrentDevice] = useState<any | null>(null)
   const [assignmentDevice, setAssignmentDevice] = useState<any | null>(null)
   const [openAssignment, setOpenAssignment] = useState(false)
@@ -64,11 +63,6 @@ export default function DoorsDevicesPage() {
       setCurrentDoor(d)
       setOpenDoor(true)
     }
-  }
-
-  const handleOpenZoneAssign = (door: Door) => {
-    setZoneAssignDoor(door)
-    setOpenZoneAssign(true)
   }
 
   const handleDeleteDoor = async (id: string) => {
@@ -100,13 +94,6 @@ export default function DoorsDevicesPage() {
 
   const refreshDoorsAndDevices = async () => {
     await Promise.all([loadDoors(), loadDevices()])
-    // Update the zoneAssignDoor with the latest data if modal is open
-    if (zoneAssignDoor && openZoneAssign) {
-      const updatedDoor = getDoors().find(d => d.id === zoneAssignDoor.id)
-      if (updatedDoor) {
-        setZoneAssignDoor(updatedDoor)
-      }
-    }
   }
 
   const handleImportDoors = async (validRows: Record<string, any>[]): Promise<number> => {
@@ -117,12 +104,15 @@ export default function DoorsDevicesPage() {
         const newDoor: Door = {
           id: String(Date.now() + Math.random()),
           name: row.name,
-          zoneId: row.zoneId || '',
-          zoneName: row.zoneName || '',
+          zoneId: String(row.zoneId || ''),
           location: row.location || '',
         }
         
-        await addDoor(newDoor)
+        await addDoor({
+          name: newDoor.name,
+          zoneId: Number(newDoor.zoneId),
+          location: newDoor.location || '',
+        })
         importedCount++
       } catch (error) {
         console.error('Failed to import door:', error)
@@ -213,30 +203,18 @@ export default function DoorsDevicesPage() {
                       </TableHeader>
                       <TableBody>
                         {data.map((door) => (
-                          <TableRow
-                            key={door.id}
-                            className='cursor-pointer hover:bg-muted/50'
-                            onClick={() => handleOpenZoneAssign(door)}
-                          >
+                          <TableRow key={door.id}>
                             {visibleColumns.map(col => (
                               <TableCell key={`${door.id}-${col.key}`}>
                                 {col.key === 'name' && <span className='font-medium'>{door.name}</span>}
                                 {col.key === 'actions' && (
-                                  <div className='flex gap-2' onClick={(e) => e.stopPropagation()}>
+                                  <div className='flex gap-2'>
                                     <Button
                                       variant='ghost'
                                       size='sm'
                                       onClick={() => handleEditDoor(door.id)}
                                     >
                                       <IconEdit size={16} />
-                                    </Button>
-                                    <Button
-                                      variant='ghost'
-                                      size='sm'
-                                      title='Assign zone'
-                                      onClick={() => handleOpenZoneAssign(door)}
-                                    >
-                                      <IconLink size={16} />
                                     </Button>
                                     <Button
                                       variant='ghost'
@@ -250,6 +228,8 @@ export default function DoorsDevicesPage() {
                                 {!['name', 'actions'].includes(col.key) && (
                                   <>
                                     {col.key === 'zoneName' && door.zoneName}
+                                    {col.key === 'deviceName' && (door.deviceName || 'Unwired')}
+                                    {col.key === 'relayIndex' && (door.relayIndex != null ? door.relayIndex : 'Not set')}
                                     {col.key === 'location' && door.location}
                                   </>
                                 )}
@@ -360,13 +340,8 @@ export default function DoorsDevicesPage() {
         open={openDoor}
         onOpenChange={(s) => { if (!s) setCurrentDoor(null); setOpenDoor(s) }}
         current={currentDoor}
-        onSuccess={refreshDoorsAndDevices}
-      />
-      <DoorZoneAssignModal
-        open={openZoneAssign}
-        onOpenChange={(s) => { if (!s) setZoneAssignDoor(null); setOpenZoneAssign(s) }}
-        door={zoneAssignDoor}
         zones={zones}
+        devices={devices}
         onSuccess={refreshDoorsAndDevices}
       />
       <AddDeviceDialog
@@ -390,19 +365,19 @@ export default function DoorsDevicesPage() {
         description='Bulk import doors from a CSV file. Doors will be created with the provided information.'
         fields={[
           { key: 'name', label: 'Door Name', required: true, type: 'string' },
-          { key: 'zoneId', label: 'Zone ID', required: false, type: 'string' },
-          { key: 'zoneName', label: 'Zone Name', required: false, type: 'string' },
+          { key: 'zoneId', label: 'Zone ID', required: true, type: 'string' },
+          { key: 'location', label: 'Location', required: false, type: 'string' },
         ]}
         exampleData={[
           {
             name: 'Main Entrance',
             zoneId: 'zone1',
-            zoneName: 'Reception'
+            location: 'Reception'
           },
           {
             name: 'Server Room Door',
             zoneId: 'zone2',
-            zoneName: 'Server Room'
+            location: 'Server Room'
           }
         ]}
         onImport={handleImportDoors}

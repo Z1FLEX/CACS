@@ -143,7 +143,7 @@ public class AccessDecisionService {
             occurredAt
         );
 
-        writeAccessLog(response, device, zone);
+        writeAccessLog(response, device, zone, card.getUuid());
         return response;
     }
 
@@ -199,13 +199,13 @@ public class AccessDecisionService {
                 .findFirst()
                 .orElse(null);
         }
-        writeAccessLog(response, device, zone);
+        writeAccessLog(response, device, zone, CardHashingService.sha256(request.getCardUid().trim()));
         return response;
     }
 
-    private void writeAccessLog(AccessSwipeResponseDTO response, Device device, Zone zone) {
+    private void writeAccessLog(AccessSwipeResponseDTO response, Device device, Zone zone, String cardReference) {
         AccessLog accessLog = AccessLog.builder()
-            .cardUid(response.getCardUid())
+            .cardUid(cardReference)
             .device(device)
             .zone(zone)
             .decision(response.getDecision().name())

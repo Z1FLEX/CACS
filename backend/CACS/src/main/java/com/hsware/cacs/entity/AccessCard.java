@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "access_card")
@@ -17,6 +18,9 @@ public class AccessCard {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
+
+    @Column(name = "uuid", nullable = false, unique = true, length = 36)
+    private String uuid;
 
     @Column(name = "uid", length = 100)
     private String uid;
@@ -35,6 +39,9 @@ public class AccessCard {
 
     @PrePersist
     protected void onCreate() {
+        if (uuid == null) {
+            uuid = UUID.randomUUID().toString();
+        }
         if (createdAt == null) {
             createdAt = Instant.now();
         }

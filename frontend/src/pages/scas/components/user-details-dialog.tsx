@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDateTime } from '@/lib/date-time'
 import type { User, AccessCard } from '@/types/scas'
-import { subscribeAccessCards, getAccessCards, loadAccessCards, updateUser, updateAccessCard } from '@/services'
+import { subscribeAccessCards, getAccessCards, loadAccessCards, updateUser } from '@/services'
 import AssignCardDialog from './assign-card-dialog'
 import { IconCreditCard, IconTrash, IconPlus } from '@tabler/icons-react'
 
@@ -40,22 +40,14 @@ export default function UserDetailsDialog({ open, onOpenChange, user }: Props) {
     if (!user || !userCard) return
 
     try {
-      // Update user to remove card assignment
       await updateUser({
         ...user,
         cardId: undefined,
       })
 
-      // Update card to remove user assignment
-      await updateAccessCard({
-        ...userCard,
-        userId: undefined,
-        userName: undefined,
-      })
-
       toast({
         title: 'Card unassigned',
-        description: `Access card ${userCard.cardNumber} has been unassigned from ${user.name}.`,
+        description: `Access card ${userCard.uuid || userCard.id} has been unassigned from ${user.name}.`,
       })
     } catch (error) {
       toast({
@@ -151,7 +143,7 @@ export default function UserDetailsDialog({ open, onOpenChange, user }: Props) {
                   <div className='space-y-4'>
                     <div className='flex items-center justify-between p-4 bg-muted rounded-lg'>
                       <div className='space-y-1'>
-                        <div className='font-medium font-mono'>{userCard.cardNumber}</div>
+                        <div className='font-medium font-mono'>{userCard.uuid || userCard.id}</div>
                         <div className='text-sm text-muted-foreground'>
                           Status: <Badge variant={userCard.status === 'ACTIVE' ? 'default' : 'secondary'} className='text-xs'>
                             {userCard.status}
@@ -159,7 +151,7 @@ export default function UserDetailsDialog({ open, onOpenChange, user }: Props) {
                         </div>
                         {userCard.issueDate && (
                           <div className='text-sm text-muted-foreground'>
-                            Issued: {formatDateTime(userCard.issueDate)}
+                            Created: {formatDateTime(userCard.createdAt || userCard.issueDate)}
                           </div>
                         )}
                       </div>

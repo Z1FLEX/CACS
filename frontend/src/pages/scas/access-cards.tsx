@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/custom/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,10 +22,9 @@ import ImportCardsDialog from './components/import-cards-dialog'
 import { IconPlus, IconTrash, IconUpload } from '@tabler/icons-react'
 
 const accessCardColumns: ColumnConfig[] = [
-  { key: 'cardNumber', label: 'Card Number', visible: true },
-  { key: 'userName', label: 'Assigned User', visible: true },
-  { key: 'status', label: 'Status', visible: true },
-  { key: 'issueDate', label: 'Issue Date', visible: true },
+  { key: 'uuid', label: 'UUID', visible: true },
+  { key: 'userName', label: 'Belongs To', visible: true },
+  { key: 'createdAt', label: 'Created At', visible: true },
   { key: 'actions', label: 'Actions', visible: true },
 ]
 
@@ -42,11 +40,11 @@ export default function AccessCardsPage() {
 
   const [open, setOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
-  const [revokeTarget, setRevokeTarget] = useState<{ id: string; cardNumber: string } | null>(null)
+  const [revokeTarget, setRevokeTarget] = useState<{ id: string; uuid: string } | null>(null)
 
   const handleDeleteCard = (id: string) => {
     const c = cards.find(x => x.id === id)
-    if (c) setRevokeTarget({ id: c.id, cardNumber: c.cardNumber })
+    if (c) setRevokeTarget({ id: c.id, uuid: c.uuid || c.id })
   }
 
   const confirmRevokeCard = async () => {
@@ -61,7 +59,7 @@ export default function AccessCardsPage() {
       <div className='flex items-center justify-between'>
         <div>
           <h2 className='text-2xl font-bold tracking-tight'>Access Cards Management</h2>
-          <p className='text-muted-foreground'>Manage physical access cards and their status</p>
+          <p className='text-muted-foreground'>Manage card inventory by UUID, assignment, and creation date</p>
         </div>
         <div className='flex gap-2'>
           <Button onClick={() => setImportOpen(true)} variant='outline' className='gap-2'>
@@ -90,7 +88,7 @@ export default function AccessCardsPage() {
             data={cards}
             columns={accessCardColumns}
             itemsPerPage={10}
-            searchableFields={['cardNumber', 'userName', 'status']}
+            searchableFields={['uuid', 'userName']}
           >
             {({ data, visibleColumns }) => (
               <div className='overflow-x-auto'>
@@ -107,20 +105,7 @@ export default function AccessCardsPage() {
                       <TableRow key={card.id}>
                         {visibleColumns.map(col => (
                           <TableCell key={`${card.id}-${col.key}`}>
-                            {col.key === 'status' && (
-                              <Badge
-                                variant={
-                                  card.status === 'ACTIVE'
-                                    ? 'default'
-                                    : card.status === 'REVOKED'
-                                    ? 'destructive'
-                                    : 'secondary'
-                                }
-                              >
-                                {card.status}
-                              </Badge>
-                            )}
-                            {col.key === 'cardNumber' && <span className='font-medium'>{card.cardNumber}</span>}
+                            {col.key === 'uuid' && <span className='font-medium font-mono text-sm'>{card.uuid || card.id}</span>}
                             {col.key === 'userName' && (card.userName || 'Unassigned')}
                             {col.key === 'actions' && (
                               <div className='flex gap-2'>
@@ -133,9 +118,9 @@ export default function AccessCardsPage() {
                                 </Button>
                               </div>
                             )}
-                            {!['status', 'cardNumber', 'userName', 'actions'].includes(col.key) && (
+                            {!['uuid', 'userName', 'actions'].includes(col.key) && (
                               <>
-                                {col.key === 'issueDate' && formatDateTime(card.issueDate)}
+                                {col.key === 'createdAt' && formatDateTime(card.createdAt || card.issueDate)}
                               </>
                             )}
                           </TableCell>
@@ -158,7 +143,7 @@ export default function AccessCardsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Revoke access card</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. Revoking the card &quot;{revokeTarget?.cardNumber}&quot; will permanently remove it from the system.
+              This action cannot be undone. Revoking the card &quot;{revokeTarget?.uuid}&quot; will permanently remove it from the system.
               The card holder will lose physical access until a new card is issued.
             </AlertDialogDescription>
           </AlertDialogHeader>

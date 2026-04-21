@@ -31,7 +31,7 @@ export default function FindCardDialog({ open, onOpenChange, cards, onCardSelect
 
     const query = searchQuery.toLowerCase()
     return cards.filter(card =>
-      card.cardNumber.toLowerCase().includes(query) ||
+      (card.uuid || card.id).toLowerCase().includes(query) ||
       card.userName?.toLowerCase().includes(query) ||
       card.status.toLowerCase().includes(query)
     )
@@ -54,7 +54,7 @@ export default function FindCardDialog({ open, onOpenChange, cards, onCardSelect
         <DialogHeader>
           <DialogTitle>Find Access Card</DialogTitle>
           <DialogDescription>
-            Search for an existing access card by card number or assigned user
+            Search for an existing access card by UUID or assigned user
           </DialogDescription>
         </DialogHeader>
 
@@ -63,7 +63,7 @@ export default function FindCardDialog({ open, onOpenChange, cards, onCardSelect
           <div className='relative'>
             <IconSearch className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
             <Input
-              placeholder='Search by card number or user name...'
+              placeholder='Search by UUID or user name...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className='pl-10'
@@ -103,7 +103,7 @@ export default function FindCardDialog({ open, onOpenChange, cards, onCardSelect
                       <div className='flex items-center justify-between'>
                         <div className='space-y-1'>
                           <div className='font-medium font-mono text-sm'>
-                            {card.cardNumber}
+                            {card.uuid || card.id}
                           </div>
                           <div className='text-sm text-muted-foreground'>
                             {card.userName ? `Assigned to: ${card.userName}` : 'Unassigned'}
@@ -123,7 +123,7 @@ export default function FindCardDialog({ open, onOpenChange, cards, onCardSelect
                             </Badge>
                             {card.issueDate && (
                               <span className='text-xs text-muted-foreground'>
-                                Issued: {formatDateTime(card.issueDate)}
+                                Created: {formatDateTime(card.createdAt || card.issueDate)}
                               </span>
                             )}
                           </div>
@@ -141,7 +141,7 @@ export default function FindCardDialog({ open, onOpenChange, cards, onCardSelect
           <div className='text-xs text-muted-foreground bg-muted p-3 rounded'>
             <p className='font-medium mb-1'>Search Tips:</p>
             <ul className='list-disc list-inside space-y-1'>
-              <li>Type card number or UID to find specific cards</li>
+              <li>Type the card UUID to find a specific card</li>
               <li>Type user name to find cards assigned to that person</li>
               <li>Type "assigned" or "unassigned" to filter by status</li>
               <li>Click on any card to select it</li>

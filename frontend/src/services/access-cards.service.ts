@@ -30,7 +30,8 @@ function normalizeCard(c: any): AccessCard {
   return {
     ...c,
     id: String(c.id),
-    cardNumber: c.cardNumber ?? c.num ?? c.uid ?? '',
+    uuid: c.uuid ?? undefined,
+    cardNumber: c.cardNumber ?? c.uuid ?? c.num ?? c.uid ?? '',
     userId: c.userId != null ? String(c.userId) : undefined,
     status: (c.status || 'ACTIVE').toUpperCase(),
     issueDate,

@@ -198,6 +198,7 @@ public class DtoMapper {
         
         return new AccessCardDTO(
             accessCard.getId(),
+            nullToEmpty(accessCard.getUuid()),
             "",
             nullToEmpty(accessCard.getNum()),
             nullToEmpty(accessCard.getStatus()),

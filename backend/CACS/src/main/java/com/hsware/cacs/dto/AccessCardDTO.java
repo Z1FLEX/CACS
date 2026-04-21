@@ -12,14 +12,16 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AccessCardDTO extends BaseDTO {
+    private String uuid;
     private String uid;
     private String num;
     private String status;
     private Integer userId;
     private String userName;
     
-    public AccessCardDTO(Integer id, String uid, String num, String status, Integer userId, String userName, Instant createdAt) {
+    public AccessCardDTO(Integer id, String uuid, String uid, String num, String status, Integer userId, String userName, Instant createdAt) {
         this.id = id;
+        this.uuid = uuid;
         this.uid = uid;
         this.num = num;
         this.status = status;

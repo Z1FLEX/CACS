@@ -24,7 +24,7 @@ interface Props {
 }
 
 interface FormData {
-  uid: string
+  cardUuid: string
 }
 
 export default function AssignCardDialog({ open, onOpenChange, user, onCardAssigned }: Props) {
@@ -37,7 +37,7 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
   const { toast } = useToast()
 
   const form = useForm<FormData>({
-    defaultValues: { uid: '' }
+    defaultValues: { cardUuid: '' }
   })
 
   useEffect(() => {
@@ -81,21 +81,20 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      const uid = form.getValues('uid').trim()
-      if (uid) {
-        handleAssignCard(uid)
+      const cardUuid = form.getValues('cardUuid').trim()
+      if (cardUuid) {
+        handleAssignCard(cardUuid)
       }
     }
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
-    form.setValue('uid', value)
+    form.setValue('cardUuid', value)
     
-    // Check if card exists when UID is entered
     if (value.trim()) {
       const card = cards.find(c => 
-        c.cardNumber === value.trim() || c.uid === value.trim()
+        (c.uuid || c.id) === value.trim()
       )
       if (card) {
         setScanStatus('detected')
@@ -107,12 +106,11 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
     }
   }
 
-  const handleAssignCard = async (uid: string) => {
+  const handleAssignCard = async (cardUuid: string) => {
     if (!user) return
 
-    // First check if card exists
     const card = cards.find(c => 
-      c.cardNumber === uid || c.uid === uid
+      (c.uuid || c.id) === cardUuid
     )
 
     if (!card) {
@@ -132,7 +130,7 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
       if (card.userId && card.userId !== user.id) {
         toast({
           title: 'Card already assigned',
-          description: `Card ${card.cardNumber} is already assigned to another user.`,
+          description: `Card ${card.uuid || card.id} is already assigned to another user.`,
           variant: 'destructive',
         })
         setScanStatus('not_found')
@@ -145,7 +143,7 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
       if (card.userId === user.id) {
         toast({
           title: 'Card already assigned',
-          description: `Card ${card.cardNumber} is already assigned to ${user.name}.`,
+          description: `Card ${card.uuid || card.id} is already assigned to ${user.name}.`,
           variant: 'destructive',
         })
         setScanStatus('detected')
@@ -159,7 +157,7 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
 
       toast({
         title: 'Card assigned successfully',
-        description: `Card ${card.cardNumber} has been assigned to ${user.name}.`,
+        description: `Card ${card.uuid || card.id} has been assigned to ${user.name}.`,
       })
 
       onCardAssigned?.()
@@ -182,7 +180,7 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
   }
 
   const handleCardSelected = (card: AccessCard) => {
-    form.setValue('uid', card.cardNumber)
+    form.setValue('cardUuid', card.uuid || card.id)
     setScanStatus('detected')
     inputRef.current?.focus()
   }
@@ -193,21 +191,21 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
         return (
           <div className='flex items-center gap-2 text-muted-foreground'>
             <div className='w-2 h-2 bg-muted-foreground rounded-full'></div>
-            <span className='text-sm'>Waiting for card scan...</span>
+            <span className='text-sm'>Waiting for card selection...</span>
           </div>
         )
       case 'detected':
         return (
           <div className='flex items-center gap-2 text-green-600'>
             <div className='w-2 h-2 bg-green-600 rounded-full'></div>
-            <span className='text-sm'>Card detected</span>
+            <span className='text-sm'>Card selected</span>
           </div>
         )
       case 'not_found':
         return (
           <div className='flex items-center gap-2 text-red-600'>
             <div className='w-2 h-2 bg-red-600 rounded-full'></div>
-            <span className='text-sm'>Card not found</span>
+            <span className='text-sm'>Card UUID not found</span>
           </div>
         )
       case 'assigning':
@@ -231,7 +229,7 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
           <DialogHeader>
             <DialogTitle>Assign Access Card</DialogTitle>
             <DialogDescription>
-              Scan a card or manually enter the UID to assign it to {user.name}
+              Select a stocked card by UUID to assign it to {user.name}
             </DialogDescription>
           </DialogHeader>
 
@@ -244,19 +242,19 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
             {/* UID Input */}
             <div className='space-y-2'>
               <label htmlFor='uid-input' className='text-sm font-medium'>
-                UID
+                Card UUID
               </label>
               <Input
                 id='uid-input'
-                placeholder='Scan card or enter UID manually'
-                {...form.register('uid')}
+                placeholder='Paste card UUID or use Find Card'
+                {...form.register('cardUuid')}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 disabled={isAssigning}
                 className='font-mono'
               />
               <p className='text-xs text-muted-foreground'>
-                You can scan a card or manually type/paste the UID. Press Enter to assign.
+                Use a card UUID from the access card inventory, or click Find Card to choose one from stock.
               </p>
             </div>
 
@@ -272,8 +270,8 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
                 Find Card
               </Button>
               <Button
-                onClick={() => handleAssignCard(form.getValues('uid').trim())}
-                disabled={!form.getValues('uid').trim() || isAssigning}
+                onClick={() => handleAssignCard(form.getValues('cardUuid').trim())}
+                disabled={!form.getValues('cardUuid').trim() || isAssigning}
                 className='flex-1'
               >
                 {isAssigning ? (

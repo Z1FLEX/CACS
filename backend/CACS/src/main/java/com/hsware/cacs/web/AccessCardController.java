@@ -4,6 +4,7 @@ import com.hsware.cacs.dto.AccessCardDTO;
 import com.hsware.cacs.dto.AccessCardCreateDTO;
 import com.hsware.cacs.dto.AccessCardUpdateDTO;
 import com.hsware.cacs.service.AccessCardService;
+import com.hsware.cacs.service.CardEnrollmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,10 +20,27 @@ import java.util.List;
 public class AccessCardController {
 
     private final AccessCardService accessCardService;
+    private final CardEnrollmentService cardEnrollmentService;
 
     @GetMapping
     public List<AccessCardDTO> list() {
         return accessCardService.findAll();
+    }
+
+    @GetMapping("/enrollment-mode")
+    public ResponseEntity<com.hsware.cacs.dto.AccessCardEnrollmentStatusDTO> enrollmentStatus() {
+        return ResponseEntity.ok(cardEnrollmentService.getEnrollmentStatus());
+    }
+
+    @PostMapping("/enrollment-mode")
+    public ResponseEntity<com.hsware.cacs.dto.AccessCardEnrollmentStatusDTO> armEnrollmentMode() {
+        return ResponseEntity.ok(cardEnrollmentService.armEnrollmentMode());
+    }
+
+    @DeleteMapping("/enrollment-mode")
+    public ResponseEntity<Void> clearEnrollmentMode() {
+        cardEnrollmentService.clearEnrollmentMode();
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")

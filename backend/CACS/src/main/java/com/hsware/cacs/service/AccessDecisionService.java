@@ -33,12 +33,29 @@ public class AccessDecisionService {
     private final UserRepository userRepository;
     private final AccessLogRepository accessLogRepository;
     private final ScheduleEvaluationService scheduleEvaluationService;
+    private final CardEnrollmentService cardEnrollmentService;
 
     @Transactional
     public AccessSwipeResponseDTO evaluateSwipe(AccessSwipeRequestDTO request) {
         Instant occurredAt = request.getOccurredAt() != null ? request.getOccurredAt() : Instant.now();
         String normalizedCardUid = request.getCardUid().trim();
         String cardHash = CardHashingService.sha256(normalizedCardUid);
+
+        if (cardEnrollmentService.isEnrollmentActive()) {
+            cardEnrollmentService.captureEnrollmentUid(normalizedCardUid);
+            return new AccessSwipeResponseDTO(
+                false,
+                AccessDecisionType.INTERCEPTED,
+                AccessDecisionReasonCode.ENROLLMENT_CAPTURED,
+                "Card captured for enrollment",
+                request.getDeviceId(),
+                request.getDoorId(),
+                null,
+                null,
+                normalizedCardUid,
+                occurredAt
+            );
+        }
 
         Device device = deviceRepository.findWithDoorsAndZonesByIdAndDeletedAtIsNull(request.getDeviceId())
             .orElse(null);

@@ -1,7 +1,7 @@
 /**
  * Access cards service – all card CRUD and subscriptions. UI must use this instead of store/mock.
  */
-import type { AccessCard } from '@/types/scas'
+import type { AccessCard, AccessCardEnrollmentStatus } from '@/types/scas'
 import {
   getAccessCards as storeGetCards,
   subscribeAccessCards as storeSubscribeCards,
@@ -12,6 +12,9 @@ import {
   apiCreateAccessCard,
   apiUpdateAccessCard,
   apiDeleteAccessCard,
+  apiGetAccessCardEnrollmentStatus,
+  apiStartAccessCardEnrollment,
+  apiStopAccessCardEnrollment,
 } from '@/api/scas'
 
 export type AccessCardSubscriber = (cards: AccessCard[]) => void
@@ -26,7 +29,7 @@ function normalizeCard(c: any): AccessCard {
   return {
     ...c,
     id: String(c.id),
-    cardNumber: c.cardNumber ?? c.uid ?? '',
+    cardNumber: c.cardNumber ?? c.num ?? c.uid ?? '',
     userId: c.userId != null ? String(c.userId) : undefined,
     status: (c.status || 'ACTIVE').toUpperCase(),
     issueDate,
@@ -45,6 +48,16 @@ export function getAccessCards(): AccessCard[] {
 
 export function subscribeAccessCards(cb: AccessCardSubscriber): () => void {
   return storeSubscribeCards(cb)
+}
+
+function normalizeEnrollmentStatus(status: AccessCardEnrollmentStatus): AccessCardEnrollmentStatus {
+  return {
+    active: Boolean(status?.active),
+    uid: status?.uid ?? null,
+    expiresInSeconds:
+      typeof status?.expiresInSeconds === 'number' ? status.expiresInSeconds : undefined,
+    capturedAt: status?.capturedAt ?? null,
+  }
 }
 
 function cardToCreateBody(card: Partial<AccessCard>): Record<string, unknown> {
@@ -69,6 +82,18 @@ export async function updateAccessCard(card: AccessCard): Promise<void> {
 export async function removeAccessCard(id: string): Promise<void> {
   await apiDeleteAccessCard(id)
   await loadAccessCards()
+}
+
+export async function startAccessCardEnrollment(): Promise<AccessCardEnrollmentStatus> {
+  return normalizeEnrollmentStatus(await apiStartAccessCardEnrollment())
+}
+
+export async function getAccessCardEnrollmentStatus(): Promise<AccessCardEnrollmentStatus> {
+  return normalizeEnrollmentStatus(await apiGetAccessCardEnrollmentStatus())
+}
+
+export async function stopAccessCardEnrollment(): Promise<void> {
+  await apiStopAccessCardEnrollment()
 }
 
 /** Assign a card to a user */

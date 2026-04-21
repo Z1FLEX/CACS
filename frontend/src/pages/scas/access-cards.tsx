@@ -20,7 +20,7 @@ import type { AccessCard } from '@/types/scas'
 import { subscribeAccessCards, getAccessCards, loadAccessCards, removeAccessCard } from '@/services'
 import AddCardDialog from './components/add-card-dialog'
 import ImportCardsDialog from './components/import-cards-dialog'
-import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
+import { IconPlus, IconTrash, IconUpload } from '@tabler/icons-react'
 
 const accessCardColumns: ColumnConfig[] = [
   { key: 'cardNumber', label: 'Card Number', visible: true },
@@ -42,16 +42,7 @@ export default function AccessCardsPage() {
 
   const [open, setOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
-  const [current, setCurrent] = useState<AccessCard | null>(null)
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; cardNumber: string } | null>(null)
-
-  const handleEditCard = (id: string) => {
-    const c = cards.find(x => x.id === id)
-    if (c) {
-      setCurrent(c)
-      setOpen(true)
-    }
-  }
 
   const handleDeleteCard = (id: string) => {
     const c = cards.find(x => x.id === id)
@@ -79,7 +70,7 @@ export default function AccessCardsPage() {
           </Button>
           <Button onClick={() => setOpen(true)} className='gap-2'>
             <IconPlus size={16} />
-            Issue Card
+            Add Card
           </Button>
         </div>
       </div>
@@ -92,7 +83,7 @@ export default function AccessCardsPage() {
           {cards.length === 0 ? (
             <EmptyState
               title="No access cards yet"
-              description="Issue a card to assign physical access to users. Cards can be linked to users and zones."
+              description="Add cards through a live scan, then assign them to users when they are ready to be activated."
             />
           ) : (
           <TableDataWrapper
@@ -136,13 +127,6 @@ export default function AccessCardsPage() {
                                 <Button
                                   variant='ghost'
                                   size='sm'
-                                  onClick={() => handleEditCard(card.id)}
-                                >
-                                  <IconEdit size={16} />
-                                </Button>
-                                <Button
-                                  variant='ghost'
-                                  size='sm'
                                   onClick={() => handleDeleteCard(card.id)}
                                 >
                                   <IconTrash size={16} />
@@ -165,7 +149,7 @@ export default function AccessCardsPage() {
           </TableDataWrapper>
           )}
         </CardContent>
-        <AddCardDialog open={open} onOpenChange={(s) => { if (!s) setCurrent(null); setOpen(s) }} current={current} />
+        <AddCardDialog open={open} onOpenChange={setOpen} />
         <ImportCardsDialog open={importOpen} onOpenChange={setImportOpen} />
       </Card>
 

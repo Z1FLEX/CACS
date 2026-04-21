@@ -3,7 +3,7 @@
  * Used by services to load/sync data and perform mutations.
  */
 import { api } from '@/api/client'
-import type { User, AccessCard, Zone, Door, Device, Profile, Schedule } from '@/types/scas'
+import type { User, AccessCard, Zone, Door, Device, Profile, Schedule, AccessCardEnrollmentStatus } from '@/types/scas'
 import type { DeviceCreateDTO, DeviceUpdateDTO } from '@/types/device'
 
 const hasBase = () =>
@@ -60,6 +60,20 @@ export async function apiUpdateAccessCard(id: string, payload: Partial<AccessCar
 
 export async function apiDeleteAccessCard(id: string): Promise<void> {
   await api.delete(`/api/access-cards/${id}`)
+}
+
+export async function apiGetAccessCardEnrollmentStatus(): Promise<AccessCardEnrollmentStatus> {
+  const { data } = await api.get<AccessCardEnrollmentStatus>('/api/access-cards/enrollment-mode')
+  return data
+}
+
+export async function apiStartAccessCardEnrollment(): Promise<AccessCardEnrollmentStatus> {
+  const { data } = await api.post<AccessCardEnrollmentStatus>('/api/access-cards/enrollment-mode')
+  return data
+}
+
+export async function apiStopAccessCardEnrollment(): Promise<void> {
+  await api.delete('/api/access-cards/enrollment-mode')
 }
 
 // Zones

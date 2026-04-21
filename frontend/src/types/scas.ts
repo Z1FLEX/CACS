@@ -71,6 +71,13 @@ export interface AccessCard {
   expiryDate?: string
 }
 
+export interface AccessCardEnrollmentStatus {
+  active: boolean
+  uid?: string | null
+  expiresInSeconds?: number
+  capturedAt?: string | null
+}
+
 // ---------------------------------------------------------------------------
 // Zone
 // ---------------------------------------------------------------------------

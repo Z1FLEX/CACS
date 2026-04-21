@@ -1,6 +1,4 @@
-import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect, useRef, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -9,108 +7,186 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/custom/button'
-import { SelectDropdown } from '@/components/select-dropdown'
-import type { AccessCard } from '@/types/scas'
-import { getAccessCards, addAccessCard, updateAccessCard } from '@/services'
-import {
-  accessCardCreateSchema,
-  accessCardStatusOptions,
-  buildNewAccessCardDraft,
-  type AccessCardCreateValues,
-} from '../lib/access-card-create'
+import { useToast } from '@/components/ui/use-toast'
+import { addAccessCard, getAccessCardEnrollmentStatus, startAccessCardEnrollment, stopAccessCardEnrollment } from '@/services'
+import { IconCreditCard, IconLoader } from '@tabler/icons-react'
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
-  current?: AccessCard | null
 }
 
-export default function AddCardDialog({ open, onOpenChange, current }: Props) {
-  const form = useForm<AccessCardCreateValues>({
-    resolver: zodResolver(accessCardCreateSchema),
-    defaultValues: { status: 'ACTIVE', cardNumber: '' },
-  })
+export default function AddCardDialog({ open, onOpenChange }: Props) {
+  const [scannedUid, setScannedUid] = useState('')
+  const [isStarting, setIsStarting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [expiresInSeconds, setExpiresInSeconds] = useState<number>()
+  const pollingRef = useRef<number | null>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
-    if (current) {
-      form.reset({
-        cardNumber: current.cardNumber || (current as any).uid || '',
-        status: current.status,
-      })
-    }
-  }, [current, form])
+    let cancelled = false
 
-  const onSubmit = async (vals: AccessCardCreateValues) => {
-    const existing = getAccessCards().find(c => (c.cardNumber || (c as any).uid) === vals.cardNumber && (!current || c.id !== current.id))
-    if (existing) {
-      form.setError('cardNumber', { message: 'Card UID already exists' })
+    const pollEnrollment = async () => {
+      try {
+        const status = await getAccessCardEnrollmentStatus()
+        if (cancelled) return
+
+        setExpiresInSeconds(status.expiresInSeconds)
+        if (status.uid) {
+          setScannedUid(status.uid)
+        }
+        if (!status.active && !status.uid) {
+          stopPolling()
+        }
+      } catch {
+        if (!cancelled) {
+          stopPolling()
+        }
+      }
+    }
+
+    const armEnrollment = async () => {
+      setIsStarting(true)
+      setScannedUid('')
+      try {
+        const status = await startAccessCardEnrollment()
+        if (cancelled) return
+        setExpiresInSeconds(status.expiresInSeconds)
+        pollEnrollment()
+        pollingRef.current = window.setInterval(pollEnrollment, 1000)
+      } catch {
+        if (!cancelled) {
+          toast({
+            title: 'Enrollment mode failed',
+            description: 'Unable to arm card enrollment mode. Please try again.',
+            variant: 'destructive',
+          })
+          onOpenChange(false)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsStarting(false)
+        }
+      }
+    }
+
+    if (open) {
+      armEnrollment()
+    } else {
+      resetState()
+    }
+
+    return () => {
+      cancelled = true
+      resetState()
+    }
+  }, [open, onOpenChange, toast])
+
+  const stopPolling = () => {
+    if (pollingRef.current !== null) {
+      window.clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+  }
+
+  const resetState = () => {
+    stopPolling()
+    setScannedUid('')
+    setExpiresInSeconds(undefined)
+    void stopAccessCardEnrollment()
+  }
+
+  const handleCreate = async () => {
+    if (!scannedUid) {
       return
     }
 
-    if (current) {
-      const updated: AccessCard = {
-        ...current,
-        cardNumber: vals.cardNumber,
-        status: (vals.status as AccessCard['status']) || 'ACTIVE',
-      }
-      await updateAccessCard(updated)
-    } else {
-      await addAccessCard(buildNewAccessCardDraft(vals))
+    setIsSaving(true)
+    try {
+      await addAccessCard({
+        cardNumber: scannedUid,
+        uid: scannedUid,
+        status: 'INACTIVE',
+      })
+      toast({
+        title: 'Card enrolled',
+        description: 'The scanned card was added in the inactive state.',
+      })
+      onOpenChange(false)
+    } catch (error: any) {
+      toast({
+        title: 'Card enrollment failed',
+        description: error?.response?.data?.message || 'Unable to create the card.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSaving(false)
     }
-
-    form.reset()
-    onOpenChange(false)
   }
 
   return (
     <Dialog
       open={open}
       onOpenChange={(s) => {
-        form.reset()
         onOpenChange(s)
       }}
     >
       <DialogContent className='sm:max-w-md'>
         <DialogHeader>
-          <DialogTitle>{current ? 'Edit Access Card' : 'Issue Access Card'}</DialogTitle>
-          <DialogDescription>{current ? 'Update card details' : 'Register a new access card in the system'}</DialogDescription>
+          <DialogTitle>Add Access Card</DialogTitle>
+          <DialogDescription>
+            The reader is armed for 60 seconds. Scan the physical card to capture its UID before creating it in stock.
+          </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form id='scas-add-card' onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-            <FormField
-              control={form.control}
-              name='cardNumber'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Card UID</FormLabel>
-                  <FormControl>
-                    <Input placeholder='AC-0001' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
-            <FormField
-              control={form.control}
-              name='status'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <FormControl>
-                    <SelectDropdown items={[...accessCardStatusOptions]} defaultValue={field.value} onValueChange={field.onChange} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+        <div className='space-y-4'>
+          <div className='rounded-lg border bg-muted/30 p-4'>
+            <div className='flex items-center gap-3'>
+              {isStarting ? (
+                <IconLoader className='h-5 w-5 animate-spin text-primary' />
+              ) : (
+                <IconCreditCard className='h-5 w-5 text-primary' />
               )}
+              <div>
+                <p className='font-medium'>
+                  {scannedUid ? 'Card captured' : 'Waiting for card scan'}
+                </p>
+                <p className='text-sm text-muted-foreground'>
+                  {scannedUid
+                    ? 'Review the captured UID below, then confirm creation.'
+                    : `Enrollment mode expires in ${expiresInSeconds ?? 60}s.`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className='space-y-2'>
+            <label htmlFor='captured-card-uid' className='text-sm font-medium'>
+              Captured Card UID
+            </label>
+            <Input
+              id='captured-card-uid'
+              value={scannedUid}
+              placeholder='Scan a physical card to populate this field'
+              readOnly
+              className='font-mono'
             />
-          </form>
-        </Form>
+            <p className='text-xs text-muted-foreground'>
+              The raw UID is only kept in memory long enough to create the card. The backend stores a SHA-256 hash and saves the new card as inactive.
+            </p>
+          </div>
+        </div>
+
         <DialogFooter>
-          <Button type='submit' form='scas-add-card'>{current ? 'Update Card' : 'Create Card'}</Button>
+          <Button variant='outline' onClick={() => onOpenChange(false)} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button onClick={handleCreate} disabled={!scannedUid || isStarting || isSaving}>
+            {isSaving ? 'Creating...' : 'Create Card'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

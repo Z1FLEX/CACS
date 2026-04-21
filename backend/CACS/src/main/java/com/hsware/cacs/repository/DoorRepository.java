@@ -13,4 +13,10 @@ public interface DoorRepository extends JpaRepository<Door, Integer> {
     Optional<Door> findByIdAndDeletedAtIsNull(Integer id);
 
     List<Door> findByZone_IdAndDeletedAtIsNull(Integer zoneId);
+
+    List<Door> findByDevice_IdAndDeletedAtIsNull(Integer deviceId);
+
+    boolean existsByDevice_IdAndRelayIndexAndDeletedAtIsNull(Integer deviceId, Integer relayIndex);
+
+    boolean existsByDevice_IdAndRelayIndexAndDeletedAtIsNullAndIdNot(Integer deviceId, Integer relayIndex, Integer id);
 }

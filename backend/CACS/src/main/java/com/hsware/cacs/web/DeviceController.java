@@ -22,8 +22,11 @@ public class DeviceController {
     private final DeviceService deviceService;
 
     @GetMapping
-    public List<DeviceDTO> list() {
-        return deviceService.findAll();
+    public List<DeviceDTO> list(
+        @RequestParam(required = false) Integer zoneId,
+        @RequestParam(required = false) Boolean available
+    ) {
+        return deviceService.findAll(zoneId, available);
     }
 
     @GetMapping("/{id}")

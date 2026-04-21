@@ -18,8 +18,8 @@ public class AccessLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "card_uid", length = 100)
-    private String cardUid;
+    @Column(name = "card_reference", length = 100)
+    private String cardReference;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "device_id")

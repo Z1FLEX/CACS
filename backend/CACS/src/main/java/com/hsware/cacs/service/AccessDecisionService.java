@@ -205,7 +205,7 @@ public class AccessDecisionService {
 
     private void writeAccessLog(AccessSwipeResponseDTO response, Device device, Zone zone, String cardReference) {
         AccessLog accessLog = AccessLog.builder()
-            .cardUid(cardReference)
+            .cardReference(cardReference)
             .device(device)
             .zone(zone)
             .decision(response.getDecision().name())

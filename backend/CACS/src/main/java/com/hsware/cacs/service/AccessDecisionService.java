@@ -15,6 +15,7 @@ import com.hsware.cacs.entity.Zone;
 import com.hsware.cacs.repository.AccessCardRepository;
 import com.hsware.cacs.repository.AccessLogRepository;
 import com.hsware.cacs.repository.DeviceRepository;
+import com.hsware.cacs.repository.DoorRepository;
 import com.hsware.cacs.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 public class AccessDecisionService {
 
     private final DeviceRepository deviceRepository;
+    private final DoorRepository doorRepository;
     private final AccessCardRepository accessCardRepository;
     private final UserRepository userRepository;
     private final AccessLogRepository accessLogRepository;
@@ -57,7 +59,7 @@ public class AccessDecisionService {
             );
         }
 
-        Device device = deviceRepository.findWithDoorsAndZonesByIdAndDeletedAtIsNull(request.getDeviceId())
+        Device device = deviceRepository.findWithZoneByIdAndDeletedAtIsNull(request.getDeviceId())
             .orElse(null);
         if (device == null) {
             return deny(request, occurredAt, AccessDecisionReasonCode.DEVICE_NOT_FOUND, "Device not found");
@@ -67,11 +69,8 @@ public class AccessDecisionService {
             return deny(request, occurredAt, AccessDecisionReasonCode.DEVICE_OFFLINE, "Device is offline");
         }
 
-        Door door = device.getDoors().stream()
-            .filter(candidate -> candidate.getId() != null && candidate.getId().equals(request.getDoorId()))
-            .findFirst()
-            .orElse(null);
-        if (door == null) {
+        Door door = doorRepository.findByIdAndDeletedAtIsNull(request.getDoorId()).orElse(null);
+        if (door == null || door.getDevice() == null || !device.getId().equals(door.getDevice().getId())) {
             return deny(request, occurredAt, AccessDecisionReasonCode.DOOR_NOT_LINKED_TO_DEVICE, "Door is not linked to device");
         }
 
@@ -192,12 +191,14 @@ public class AccessDecisionService {
         }
         Zone zone = null;
         if (device != null && request.getDoorId() != null) {
-            zone = device.getDoors().stream()
-                .filter(door -> door.getId() != null && door.getId().equals(request.getDoorId()))
-                .map(Door::getZone)
-                .filter(candidateZone -> candidateZone != null && candidateZone.getDeletedAt() == null)
-                .findFirst()
-                .orElse(null);
+            Door matchedDoor = doorRepository.findByIdAndDeletedAtIsNull(request.getDoorId()).orElse(null);
+            if (matchedDoor != null
+                && matchedDoor.getDevice() != null
+                && device.getId().equals(matchedDoor.getDevice().getId())
+                && matchedDoor.getZone() != null
+                && matchedDoor.getZone().getDeletedAt() == null) {
+                zone = matchedDoor.getZone();
+            }
         }
         writeAccessLog(response, device, zone, CardHashingService.sha256(request.getCardUid().trim()));
         return response;

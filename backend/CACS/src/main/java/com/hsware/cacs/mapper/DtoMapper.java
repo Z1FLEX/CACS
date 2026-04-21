@@ -4,6 +4,7 @@ import com.hsware.cacs.dto.*;
 import com.hsware.cacs.entity.*;
 import com.hsware.cacs.repository.AccessCardRepository;
 import com.hsware.cacs.repository.DoorRepository;
+import com.hsware.cacs.repository.DeviceRepository;
 import com.hsware.cacs.repository.ProfileRepository;
 import com.hsware.cacs.repository.RoleRepository;
 import com.hsware.cacs.repository.ScheduleRepository;
@@ -32,6 +33,7 @@ public class DtoMapper {
     private final ZoneRepository zoneRepository;
     private final ZoneTypeRepository zoneTypeRepository;
     private final DoorRepository doorRepository;
+    private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
     private final ScheduleRepository scheduleRepository;
     private final CardHashingService cardHashingService;
@@ -373,18 +375,6 @@ public class DtoMapper {
     public DeviceDTO toDeviceDTO(Device device) {
         if (device == null) return null;
 
-        List<Door> sortedDoors = device.getDoors().stream()
-                .sorted((d1, d2) -> Integer.compare(d1.getId(), d2.getId()))
-                .toList();
-
-        List<Integer> doorIds = sortedDoors.stream()
-                .map(Door::getId)
-                .toList();
-
-        List<String> doorNames = sortedDoors.stream()
-                .map(d -> nullToEmpty(d.getName()))
-                .toList();
-
         DeviceDTO deviceDTO = new DeviceDTO();
         deviceDTO.setId(device.getId());
         deviceDTO.setCreatedAt(device.getCreatedAt());
@@ -395,8 +385,9 @@ public class DtoMapper {
         deviceDTO.setIp(nullToEmpty(device.getIp()));
         deviceDTO.setPort(device.getPort());
         deviceDTO.setLastSeenAt(device.getLastSeenAt());
-        deviceDTO.setDoorIds(doorIds);
-        deviceDTO.setDoorNames(doorNames);
+        deviceDTO.setZoneId(device.getZone() != null ? device.getZone().getId() : null);
+        deviceDTO.setZoneName(device.getZone() != null ? nullToEmpty(device.getZone().getName()) : "");
+        deviceDTO.setRelayCount(device.getRelayCount());
         return deviceDTO;
     }
 
@@ -410,11 +401,8 @@ public class DtoMapper {
         device.setStatus("OFFLINE");
         device.setIp(dto.getIp());
         device.setPort(dto.getPort());
-
-        if (dto.getDoorIds() != null && !dto.getDoorIds().isEmpty()) {
-            List<Door> doors = doorRepository.findAllById(dto.getDoorIds());
-            device.setDoors(new HashSet<>(doors));
-        }
+        device.setRelayCount(dto.getRelayCount());
+        zoneRepository.findById(dto.getZoneId()).ifPresent(device::setZone);
 
         return device;
     }
@@ -428,14 +416,9 @@ public class DtoMapper {
         Optional.ofNullable(dto.getStatus()).ifPresent(status -> device.setStatus(status.toUpperCase()));
         Optional.ofNullable(dto.getIp()).ifPresent(device::setIp);
         Optional.ofNullable(dto.getPort()).ifPresent(device::setPort);
-
-        if (dto.getDoorIds() != null) {
-            if (dto.getDoorIds().isEmpty()) {
-                device.setDoors(new HashSet<>());
-            } else {
-                List<Door> doors = doorRepository.findAllById(dto.getDoorIds());
-                device.setDoors(new HashSet<>(doors));
-            }
+        Optional.ofNullable(dto.getRelayCount()).ifPresent(device::setRelayCount);
+        if (dto.getZoneId() != null) {
+            zoneRepository.findById(dto.getZoneId()).ifPresent(device::setZone);
         }
     }
 
@@ -449,6 +432,9 @@ public class DtoMapper {
             zone != null ? zone.getId() : null,
             zone != null ? nullToEmpty(zone.getName()) : "",
             nullToEmpty(door.getLocation()),
+            door.getDevice() != null ? door.getDevice().getId() : null,
+            door.getDevice() != null ? nullToEmpty(door.getDevice().getSerialNumber()) : "",
+            door.getRelayIndex(),
             door.getCreatedAt()
         );
     }
@@ -463,6 +449,10 @@ public class DtoMapper {
         if (dto.getZoneId() != null) {
             zoneRepository.findById(dto.getZoneId()).ifPresent(door::setZone);
         }
+        if (dto.getDeviceId() != null && dto.getDeviceId() != 0) {
+            deviceRepository.findById(dto.getDeviceId()).ifPresent(door::setDevice);
+        }
+        door.setRelayIndex(dto.getRelayIndex());
         
         return door;
     }
@@ -474,11 +464,18 @@ public class DtoMapper {
         if (dto.getLocation() != null) door.setLocation(dto.getLocation());
         
         if (dto.getZoneId() != null) {
-            if (dto.getZoneId() == 0) {
-                door.setZone(null);
+            zoneRepository.findById(dto.getZoneId()).ifPresent(door::setZone);
+        }
+        if (dto.getDeviceId() != null) {
+            if (dto.getDeviceId() == 0) {
+                door.setDevice(null);
+                door.setRelayIndex(null);
             } else {
-                zoneRepository.findById(dto.getZoneId()).ifPresent(door::setZone);
+                deviceRepository.findById(dto.getDeviceId()).ifPresent(door::setDevice);
+                door.setRelayIndex(dto.getRelayIndex());
             }
+        } else if (dto.getRelayIndex() != null) {
+            door.setRelayIndex(dto.getRelayIndex());
         }
     }
 

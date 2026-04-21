@@ -13,11 +13,11 @@ public interface DeviceRepository extends JpaRepository<Device, Integer> {
 
     Optional<Device> findByIdAndDeletedAtIsNull(Integer id);
 
-    List<Device> findByDoors_IdAndDeletedAtIsNull(Integer doorId);
+    List<Device> findByZone_IdAndDeletedAtIsNull(Integer zoneId);
 
-    @EntityGraph(attributePaths = {"doors", "doors.zone"})
+    @EntityGraph(attributePaths = {"zone"})
     Optional<Device> findByIdAndDeletedAtIsNullAndStatus(Integer id, String status);
 
-    @EntityGraph(attributePaths = {"doors", "doors.zone"})
-    Optional<Device> findWithDoorsAndZonesByIdAndDeletedAtIsNull(Integer id);
+    @EntityGraph(attributePaths = {"zone"})
+    Optional<Device> findWithZoneByIdAndDeletedAtIsNull(Integer id);
 }

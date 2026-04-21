@@ -1,13 +1,10 @@
 package com.hsware.cacs.entity;
 
 import com.hsware.cacs.dto.DeviceType;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "device")
@@ -44,14 +41,12 @@ public class Device {
     @Column(name = "last_seen_at")
     private Instant lastSeenAt;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "device_door",
-            joinColumns = @JoinColumn(name = "device_id"),
-            inverseJoinColumns = @JoinColumn(name = "door_id")
-    )
-    @JsonManagedReference("device-doors")
-    private Set<Door> doors = new HashSet<>();
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "zone_id", nullable = false)
+    private Zone zone;
+
+    @Column(name = "relay_count", nullable = false)
+    private Integer relayCount;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
@@ -64,6 +59,9 @@ public class Device {
         this.createdAt = Instant.now();
         if (this.status == null) {
             this.status = "OFFLINE";
+        }
+        if (this.relayCount == null) {
+            this.relayCount = 1;
         }
     }
 }

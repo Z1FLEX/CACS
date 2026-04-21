@@ -4,8 +4,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
-import java.util.List;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,6 +15,6 @@ public class DeviceUpdateDTO {
     private String status;
     private String ip;
     private Integer port;
-
-    private List<Integer> doorIds;
+    private Integer zoneId;
+    private Integer relayCount;
 }

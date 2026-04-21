@@ -5,6 +5,7 @@ import com.hsware.cacs.dto.UserUpdateDTO;
 import com.hsware.cacs.entity.Role;
 import com.hsware.cacs.entity.User;
 import com.hsware.cacs.repository.AccessCardRepository;
+import com.hsware.cacs.repository.DeviceRepository;
 import com.hsware.cacs.repository.DoorRepository;
 import com.hsware.cacs.repository.ProfileRepository;
 import com.hsware.cacs.repository.RoleRepository;
@@ -36,6 +37,7 @@ class DtoMapperUserRolesTest {
     @Mock private ZoneRepository zoneRepository;
     @Mock private ZoneTypeRepository zoneTypeRepository;
     @Mock private DoorRepository doorRepository;
+    @Mock private DeviceRepository deviceRepository;
     @Mock private UserRepository userRepository;
     @Mock private ScheduleRepository scheduleRepository;
 
@@ -50,6 +52,7 @@ class DtoMapperUserRolesTest {
             zoneRepository,
             zoneTypeRepository,
             doorRepository,
+            deviceRepository,
             userRepository,
             scheduleRepository,
             new CardHashingService()

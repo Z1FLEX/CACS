@@ -6,7 +6,6 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
-import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -19,6 +18,7 @@ public class DeviceDTO extends BaseDTO {
     private String ip;
     private Integer port;
     private Instant lastSeenAt;
-    private List<Integer> doorIds;
-    private List<String> doorNames;
+    private Integer zoneId;
+    private String zoneName;
+    private Integer relayCount;
 }

@@ -9,8 +9,6 @@ import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Max;
-import java.util.ArrayList;
-import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -36,5 +34,11 @@ public class DeviceCreateDTO {
     @Min(1) @Max(65535)
     private Integer port;
 
-    public List<Integer> doorIds;
+    @NotNull
+    private Integer zoneId;
+
+    @NotNull
+    @Min(1)
+    @Max(64)
+    private Integer relayCount;
 }

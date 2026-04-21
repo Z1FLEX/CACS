@@ -58,18 +58,11 @@ export type AccessCardStatus = 'ACTIVE' | 'INACTIVE' | 'REVOKED'
 export interface AccessCard {
   id: string
   uuid?: string
-  /** Card UID (unique identifier) */
-  uid?: string
-  /** Alias for uid / display */
-  cardNumber: string
-  num?: string
   status: AccessCardStatus
   createdAt?: string
   deletedAt?: string | null
   userId?: string
   userName?: string
-  issueDate?: string
-  expiryDate?: string
 }
 
 export interface AccessCardEnrollmentStatus {

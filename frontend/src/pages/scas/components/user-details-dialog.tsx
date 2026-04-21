@@ -149,9 +149,9 @@ export default function UserDetailsDialog({ open, onOpenChange, user }: Props) {
                             {userCard.status}
                           </Badge>
                         </div>
-                        {userCard.issueDate && (
+                        {userCard.createdAt && (
                           <div className='text-sm text-muted-foreground'>
-                            Created: {formatDateTime(userCard.createdAt || userCard.issueDate)}
+                            Created: {formatDateTime(userCard.createdAt)}
                           </div>
                         )}
                       </div>

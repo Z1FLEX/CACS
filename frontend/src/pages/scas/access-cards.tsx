@@ -120,7 +120,7 @@ export default function AccessCardsPage() {
                             )}
                             {!['uuid', 'userName', 'actions'].includes(col.key) && (
                               <>
-                                {col.key === 'createdAt' && formatDateTime(card.createdAt || card.issueDate)}
+                                {col.key === 'createdAt' && card.createdAt && formatDateTime(card.createdAt)}
                               </>
                             )}
                           </TableCell>

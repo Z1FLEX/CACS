@@ -239,13 +239,13 @@ export default function AssignCardDialog({ open, onOpenChange, user, onCardAssig
               {getStatusIndicator()}
             </div>
 
-            {/* UID Input */}
+            {/* Card UUID Input */}
             <div className='space-y-2'>
-              <label htmlFor='uid-input' className='text-sm font-medium'>
+              <label htmlFor='card-uuid-input' className='text-sm font-medium'>
                 Card UUID
               </label>
               <Input
-                id='uid-input'
+                id='card-uuid-input'
                 placeholder='Paste card UUID or use Find Card'
                 {...form.register('cardUuid')}
                 onChange={handleInputChange}

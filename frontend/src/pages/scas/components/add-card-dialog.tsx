@@ -106,11 +106,7 @@ export default function AddCardDialog({ open, onOpenChange }: Props) {
 
     setIsSaving(true)
     try {
-      await addAccessCard({
-        cardNumber: scannedUid,
-        uid: scannedUid,
-        status: 'INACTIVE',
-      })
+      await addAccessCard(scannedUid)
       toast({
         title: 'Card enrolled',
         description: 'The scanned card was added in the inactive state.',

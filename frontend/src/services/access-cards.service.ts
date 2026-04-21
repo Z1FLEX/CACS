@@ -21,20 +21,16 @@ import {
 export type AccessCardSubscriber = (cards: AccessCard[]) => void
 
 function normalizeCard(c: any): AccessCard {
-  const issueDate =
-    (typeof c.issueDate === 'string' && c.issueDate.trim() !== '' && c.issueDate) ||
-    (typeof c.createdAt === 'string' && c.createdAt.trim() !== '' && c.createdAt) ||
-    (typeof c.created_at === 'string' && c.created_at.trim() !== '' && c.created_at) ||
-    new Date().toISOString()
-
   return {
     ...c,
     id: String(c.id),
     uuid: c.uuid ?? undefined,
-    cardNumber: c.cardNumber ?? c.uuid ?? c.num ?? c.uid ?? '',
     userId: c.userId != null ? String(c.userId) : undefined,
     status: (c.status || 'ACTIVE').toUpperCase(),
-    issueDate,
+    createdAt:
+      (typeof c.createdAt === 'string' && c.createdAt.trim() !== '' && c.createdAt) ||
+      (typeof c.created_at === 'string' && c.created_at.trim() !== '' && c.created_at) ||
+      undefined,
   }
 }
 
@@ -62,16 +58,15 @@ function normalizeEnrollmentStatus(status: AccessCardEnrollmentStatus): AccessCa
   }
 }
 
-function cardToCreateBody(card: Partial<AccessCard>): Record<string, unknown> {
+function cardToCreateBody(rawUid: string): Record<string, unknown> {
   return {
-    uid: card.uid || card.cardNumber,
-    num: card.cardNumber,
-    status: card.status,
+    uid: rawUid,
+    status: 'INACTIVE',
   }
 }
 
-export async function addAccessCard(card: Partial<AccessCard>): Promise<void> {
-  await apiCreateAccessCard(cardToCreateBody(card))
+export async function addAccessCard(rawUid: string): Promise<void> {
+  await apiCreateAccessCard(cardToCreateBody(rawUid))
   await loadAccessCards()
 }
 
@@ -102,28 +97,4 @@ export async function importAccessCards(file: File): Promise<number> {
   const result = await apiImportAccessCards(file)
   await loadAccessCards()
   return result.importedCount
-}
-
-/** Assign a card to a user */
-export async function assignCardToUser(cardId: string, userId: string, userName: string): Promise<void> {
-  const card = getAccessCards().find(c => c.id === cardId)
-  if (!card) throw new Error('Card not found')
-  
-  await updateAccessCard({
-    ...card,
-    userId,
-    userName,
-  })
-}
-
-/** Unassign a card from a user */
-export async function unassignCard(cardId: string): Promise<void> {
-  const card = getAccessCards().find(c => c.id === cardId)
-  if (!card) throw new Error('Card not found')
-  
-  await updateAccessCard({
-    ...card,
-    userId: undefined,
-    userName: undefined,
-  })
 }

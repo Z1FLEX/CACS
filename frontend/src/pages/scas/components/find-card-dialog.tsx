@@ -121,9 +121,9 @@ export default function FindCardDialog({ open, onOpenChange, cards, onCardSelect
                             >
                               {card.status}
                             </Badge>
-                            {card.issueDate && (
+                            {card.createdAt && (
                               <span className='text-xs text-muted-foreground'>
-                                Created: {formatDateTime(card.createdAt || card.issueDate)}
+                                Created: {formatDateTime(card.createdAt)}
                               </span>
                             )}
                           </div>

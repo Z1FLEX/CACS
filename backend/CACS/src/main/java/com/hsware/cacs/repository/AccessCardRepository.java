@@ -17,4 +17,6 @@ public interface AccessCardRepository extends JpaRepository<AccessCard, Integer>
     boolean existsByNumAndDeletedAtIsNull(String num);
 
     boolean existsByNumAndDeletedAtIsNullAndIdNot(String num, Integer id);
+
+    List<AccessCard> findByNumInAndDeletedAtIsNull(List<String> nums);
 }

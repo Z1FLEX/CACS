@@ -76,6 +76,16 @@ export async function apiStopAccessCardEnrollment(): Promise<void> {
   await api.delete('/api/access-cards/enrollment-mode')
 }
 
+export async function apiImportAccessCards(file: File): Promise<{ importedCount: number }> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const { data } = await api.post<{ importedCount: number }>('/api/access-cards/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
 // Zones
 export async function apiGetZones(): Promise<Zone[]> {
   const { data } = await api.get<Zone[]>('/api/zones')

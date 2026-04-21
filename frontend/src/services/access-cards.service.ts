@@ -13,6 +13,7 @@ import {
   apiUpdateAccessCard,
   apiDeleteAccessCard,
   apiGetAccessCardEnrollmentStatus,
+  apiImportAccessCards,
   apiStartAccessCardEnrollment,
   apiStopAccessCardEnrollment,
 } from '@/api/scas'
@@ -94,6 +95,12 @@ export async function getAccessCardEnrollmentStatus(): Promise<AccessCardEnrollm
 
 export async function stopAccessCardEnrollment(): Promise<void> {
   await apiStopAccessCardEnrollment()
+}
+
+export async function importAccessCards(file: File): Promise<number> {
+  const result = await apiImportAccessCards(file)
+  await loadAccessCards()
+  return result.importedCount
 }
 
 /** Assign a card to a user */

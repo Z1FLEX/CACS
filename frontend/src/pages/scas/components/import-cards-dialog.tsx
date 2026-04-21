@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -11,15 +11,8 @@ import { Button } from '@/components/custom/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
-import { addAccessCard } from '@/services'
-import { IconUpload, IconFileText, IconX } from '@tabler/icons-react'
-import {
-  accessCardImportDescription,
-  accessCardImportExampleData,
-  accessCardStatusOptions,
-  buildNewAccessCardDraft,
-  type AccessCardCreateValues,
-} from '../lib/access-card-create'
+import { importAccessCards } from '@/services'
+import { IconFileText, IconLoader, IconUpload, IconX } from '@tabler/icons-react'
 
 interface Props {
   open: boolean
@@ -28,172 +21,92 @@ interface Props {
 
 export default function ImportCardsDialog({ open, onOpenChange }: Props) {
   const [isDragging, setIsDragging] = useState(false)
-  const [parsedCards, setParsedCards] = useState<AccessCardCreateValues[]>([])
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
+  const resetDialog = () => {
+    setSelectedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
+  const handleClose = () => {
+    resetDialog()
+    onOpenChange(false)
   }
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    
-    const files = Array.from(e.dataTransfer.files)
-    const csvFile = files.find(file => file.type === 'text/csv' || file.name.endsWith('.csv'))
-    
-    if (csvFile) {
-      processCSVFile(csvFile)
-    } else {
+  const acceptFile = (file?: File | null) => {
+    if (!file) {
+      return
+    }
+
+    if (!(file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv'))) {
       toast({
         title: 'Invalid file',
         description: 'Please upload a CSV file.',
         variant: 'destructive',
       })
+      return
     }
+
+    setSelectedFile(file)
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      processCSVFile(file)
-    }
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault()
+    setIsDragging(true)
   }
 
-  const processCSVFile = (file: File) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const text = e.target?.result as string
-      parseCSV(text)
-    }
-    reader.readAsText(file)
+  const handleDragLeave = (event: React.DragEvent) => {
+    event.preventDefault()
+    setIsDragging(false)
   }
 
-  const parseCSV = (text: string) => {
-    try {
-      const lines = text.trim().split('\n')
-      const headers = lines[0].toLowerCase().split(',').map(h => h.trim())
-      type AccessCardStatus = AccessCardCreateValues['status']
-      
-      const cardNumberIndex = headers.findIndex(h => 
-        h.includes('card') || h.includes('uid') || h.includes('number')
-      )
-      const statusIndex = headers.findIndex(h => h.includes('status'))
-      
-      if (cardNumberIndex === -1) {
-        toast({
-          title: 'Invalid CSV format',
-          description: 'CSV must contain a Card UID column.',
-          variant: 'destructive',
-        })
-        return
-      }
-
-      const cards: AccessCardCreateValues[] = []
-      const validStatuses = new Set<AccessCardStatus>(accessCardStatusOptions.map((option) => option.value))
-      let invalidStatusCount = 0
-      
-      for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim())
-        const cardNumber = values[cardNumberIndex]
-        const rawStatus = (statusIndex >= 0 ? values[statusIndex]?.toUpperCase() : '') as AccessCardStatus | ''
-        const status: AccessCardStatus = rawStatus && validStatuses.has(rawStatus) ? rawStatus : 'ACTIVE'
-
-        if (rawStatus && !validStatuses.has(rawStatus)) {
-          invalidStatusCount++
-        }
-        
-        if (cardNumber && cardNumber !== '') {
-          cards.push({
-            cardNumber,
-            status,
-          })
-        }
-      }
-
-      if (cards.length === 0) {
-        toast({
-          title: 'No valid cards found',
-          description: 'CSV file does not contain any valid card numbers.',
-          variant: 'destructive',
-        })
-        return
-      }
-
-      setParsedCards(cards)
-      toast({
-        title: 'CSV parsed successfully',
-        description: invalidStatusCount > 0
-          ? `Found ${cards.length} card(s) to import. ${invalidStatusCount} row(s) used ACTIVE because the status value was invalid.`
-          : `Found ${cards.length} card(s) to import.`,
-      })
-    } catch (error) {
-      toast({
-        title: 'Error parsing CSV',
-        description: 'Please check your CSV file format.',
-        variant: 'destructive',
-      })
-    }
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault()
+    setIsDragging(false)
+    acceptFile(event.dataTransfer.files?.[0] ?? null)
   }
 
   const handleImport = async () => {
-    if (parsedCards.length === 0) return
+    if (!selectedFile) {
+      return
+    }
 
     setIsProcessing(true)
-    let successCount = 0
-    let errorCount = 0
-
-    for (const cardData of parsedCards) {
-      try {
-        await addAccessCard(buildNewAccessCardDraft(cardData))
-        successCount++
-      } catch (error) {
-        errorCount++
-      }
+    try {
+      const importedCount = await importAccessCards(selectedFile)
+      toast({
+        title: 'Import completed',
+        description: `Imported ${importedCount} card(s). Each card was hashed and saved in the inactive state.`,
+      })
+      handleClose()
+    } catch (error: any) {
+      toast({
+        title: 'Import failed',
+        description: error?.response?.data?.message || 'Unable to import access cards.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsProcessing(false)
     }
-
-    setIsProcessing(false)
-    
-    toast({
-      title: 'Import completed',
-      description: `Successfully imported ${successCount} card(s).${errorCount > 0 ? ` ${errorCount} card(s) failed.` : ''}`,
-      variant: errorCount > 0 ? 'destructive' : 'default',
-    })
-
-    if (successCount > 0) {
-      setParsedCards([])
-      onOpenChange(false)
-    }
-  }
-
-  const handleClose = () => {
-    setParsedCards([])
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-    onOpenChange(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? handleClose() : onOpenChange(nextOpen))}>
       <DialogContent className='sm:max-w-2xl'>
         <DialogHeader>
           <DialogTitle>Import Access Cards</DialogTitle>
           <DialogDescription>
-            {accessCardImportDescription}
+            Upload a CSV file with a `uid` column and an optional `type` column. The backend hashes each UID, rejects duplicates, and creates all imported cards as inactive stock.
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
-          {parsedCards.length === 0 ? (
+          {!selectedFile ? (
             <Card>
               <CardContent className='p-6'>
                 <div
@@ -206,7 +119,7 @@ export default function ImportCardsDialog({ open, onOpenChange }: Props) {
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
-                  <IconUpload className='mx-auto h-12 w-12 text-muted-foreground mb-4' />
+                  <IconUpload className='mx-auto mb-4 h-12 w-12 text-muted-foreground' />
                   <div className='space-y-2'>
                     <p className='text-lg font-medium'>Drop CSV file here</p>
                     <p className='text-sm text-muted-foreground'>or click to browse</p>
@@ -215,9 +128,9 @@ export default function ImportCardsDialog({ open, onOpenChange }: Props) {
                     ref={fileInputRef}
                     type='file'
                     accept='.csv'
-                    onChange={handleFileSelect}
+                    onChange={(event) => acceptFile(event.target.files?.[0] ?? null)}
                     className='hidden'
-                    id='csv-upload'
+                    id='access-card-csv-upload'
                   />
                   <Button
                     variant='outline'
@@ -232,63 +145,39 @@ export default function ImportCardsDialog({ open, onOpenChange }: Props) {
           ) : (
             <Card>
               <CardContent className='p-6'>
-                <div className='flex items-center justify-between mb-4'>
+                <div className='mb-4 flex items-center justify-between'>
                   <div className='flex items-center gap-2'>
                     <IconFileText className='h-5 w-5' />
-                    <span className='font-medium'>Cards to Import ({parsedCards.length})</span>
+                    <span className='font-medium'>{selectedFile.name}</span>
                   </div>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => {
-                      setParsedCards([])
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = ''
-                      }
-                    }}
-                  >
+                  <Button variant='ghost' size='sm' onClick={resetDialog} disabled={isProcessing}>
                     <IconX className='h-4 w-4' />
                   </Button>
                 </div>
-                <div className='max-h-60 overflow-y-auto space-y-2'>
-                  {parsedCards.slice(0, 10).map((card, index) => (
-                    <div key={index} className='flex items-center justify-between p-2 bg-muted rounded'>
-                      <span className='text-sm font-mono'>{card.cardNumber}</span>
-                      <span className='text-xs text-muted-foreground'>Status: {card.status}</span>
-                    </div>
-                  ))}
-                  {parsedCards.length > 10 && (
-                    <p className='text-sm text-muted-foreground text-center py-2'>
-                      ... and {parsedCards.length - 10} more cards
-                    </p>
-                  )}
+                <div className='space-y-2 text-sm text-muted-foreground'>
+                  <p>Size: {(selectedFile.size / 1024).toFixed(1)} KB</p>
+                  <p>Expected columns: `uid` and optional `type`.</p>
+                  <p>Duplicate hashes already in stock or repeated in the file will fail the import.</p>
                 </div>
               </CardContent>
             </Card>
           )}
-
-          <div className='text-xs text-muted-foreground'>
-            <p className='font-medium mb-1'>CSV Format Requirements:</p>
-            <ul className='list-disc list-inside space-y-1'>
-              <li>First row should contain column headers</li>
-              <li>Supported columns are Card UID and Status</li>
-              <li>Status is optional and must be ACTIVE, INACTIVE, or REVOKED</li>
-              <li>Each row should have a card UID</li>
-              <li>Example header: cardNumber,status</li>
-              <li>Example rows: {accessCardImportExampleData.map((row) => `${row.cardNumber},${row.status}`).join(' | ')}</li>
-            </ul>
-          </div>
         </div>
 
         <DialogFooter>
-          <Button variant='outline' onClick={handleClose}>
+          <Button variant='outline' onClick={handleClose} disabled={isProcessing}>
             Cancel
           </Button>
-          {parsedCards.length > 0 && (
-            <Button onClick={handleImport} disabled={isProcessing}>
-              {isProcessing ? 'Importing...' : `Import ${parsedCards.length} Cards`}
-            </Button>
-          )}
+          <Button onClick={handleImport} disabled={!selectedFile || isProcessing}>
+            {isProcessing ? (
+              <>
+                <IconLoader className='mr-2 h-4 w-4 animate-spin' />
+                Importing...
+              </>
+            ) : (
+              'Import Cards'
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

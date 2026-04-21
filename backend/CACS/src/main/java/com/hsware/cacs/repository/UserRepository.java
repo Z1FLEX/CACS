@@ -15,7 +15,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @EntityGraph(attributePaths = {"roles"})
     Optional<User> findByIdAndDeletedAtIsNull(Integer id);
 
-    Optional<User> findByAccessCard_Id(Integer accessCardId);
+    Optional<User> findByAccessCard_IdAndDeletedAtIsNull(Integer accessCardId);
 
     @EntityGraph(attributePaths = {"roles"})
     Optional<User> findByEmailAndDeletedAtIsNull(String email);

@@ -4,8 +4,10 @@ import com.hsware.cacs.dto.AccessCardDTO;
 import com.hsware.cacs.dto.AccessCardCreateDTO;
 import com.hsware.cacs.dto.AccessCardUpdateDTO;
 import com.hsware.cacs.entity.AccessCard;
+import com.hsware.cacs.entity.User;
 import com.hsware.cacs.mapper.DtoMapper;
 import com.hsware.cacs.repository.AccessCardRepository;
+import com.hsware.cacs.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 public class AccessCardService {
 
     private final AccessCardRepository accessCardRepository;
+    private final UserRepository userRepository;
     private final DtoMapper dtoMapper;
 
     @Transactional(readOnly = true)
@@ -39,6 +42,7 @@ public class AccessCardService {
         if (accessCardRepository.existsByNumAndDeletedAtIsNull(accessCard.getNum())) {
             throw new IllegalArgumentException("Card already exists");
         }
+        accessCard.setStatus("INACTIVE");
         accessCard = accessCardRepository.save(accessCard);
         return dtoMapper.toAccessCardDTO(accessCard);
     }
@@ -52,6 +56,7 @@ public class AccessCardService {
         if (accessCardRepository.existsByNumAndDeletedAtIsNullAndIdNot(accessCard.getNum(), id)) {
             throw new IllegalArgumentException("Card already exists");
         }
+        validateStateTransition(accessCard);
         accessCard = accessCardRepository.save(accessCard);
         return Optional.of(dtoMapper.toAccessCardDTO(accessCard));
     }
@@ -61,10 +66,22 @@ public class AccessCardService {
         Optional<AccessCard> existing = accessCardRepository.findByIdAndDeletedAtIsNull(id);
         if (existing.isEmpty()) return false;
         AccessCard c = existing.get();
+        userRepository.findByAccessCard_IdAndDeletedAtIsNull(c.getId()).ifPresent(user -> user.setAccessCard(null));
         c.setDeletedAt(java.time.Instant.now());
         c.setStatus("INACTIVE");
         accessCardRepository.save(c);
         return true;
+    }
+
+    private void validateStateTransition(AccessCard accessCard) {
+        if (!"ACTIVE".equalsIgnoreCase(accessCard.getStatus())) {
+            return;
+        }
+
+        User assignedUser = userRepository.findByAccessCard_IdAndDeletedAtIsNull(accessCard.getId()).orElse(null);
+        if (assignedUser == null) {
+            throw new IllegalArgumentException("Only assigned cards can be ACTIVE");
+        }
     }
 
 }

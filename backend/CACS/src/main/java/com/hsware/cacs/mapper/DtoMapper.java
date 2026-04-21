@@ -181,7 +181,7 @@ public class DtoMapper {
         Integer userId = null;
         String userName = "Unassigned";
         if (accessCard.getId() != null) {
-            var userOpt = userRepository.findByAccessCard_Id(accessCard.getId());
+            var userOpt = userRepository.findByAccessCard_IdAndDeletedAtIsNull(accessCard.getId());
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
                 userId = user.getId();
@@ -213,7 +213,7 @@ public class DtoMapper {
         AccessCard accessCard = new AccessCard();
         accessCard.setUid(null);
         accessCard.setNum(cardHashingService.hash(dto.getUid()));
-        accessCard.setStatus(dto.getStatus() != null ? dto.getStatus().toUpperCase() : "ACTIVE");
+        accessCard.setStatus("INACTIVE");
         
         return accessCard;
     }

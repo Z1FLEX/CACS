@@ -31,6 +31,12 @@ function normalizeDevice(d: unknown): Device {
   return {
     ...raw,
     id:        String(raw.id),
+    zoneId:    raw.zoneId != null ? String(raw.zoneId) : undefined,
+    zoneName:  (raw.zoneName as string) || '',
+    relayCount: typeof raw.relayCount === 'number' ? raw.relayCount : undefined,
+    availableRelayIndices: Array.isArray(raw.availableRelayIndices)
+      ? raw.availableRelayIndices.map((value) => String(value))
+      : [],
     doorIds:   ((raw.doorIds as number[]) || []).map(String),
     doorNames: (raw.doorNames as string[]) || [],
     name:      (raw.name as string) ?? (raw.serialNumber as string) ?? '',

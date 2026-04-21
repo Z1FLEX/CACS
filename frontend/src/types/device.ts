@@ -10,7 +10,8 @@ export interface DeviceCreateDTO {
   modelName: string
   ip?: string
   port?: number
-  doorIds?: number[]
+  zoneId: number
+  relayCount: number
 }
 
 export interface DeviceUpdateDTO {
@@ -20,5 +21,7 @@ export interface DeviceUpdateDTO {
   status?: string
   ip?: string
   port?: number
+  zoneId?: number
+  relayCount?: number
   doorIds?: number[]
 }

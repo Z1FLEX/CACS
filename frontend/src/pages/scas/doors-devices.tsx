@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/custom/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-wrapper'
 import type { Door, Device, Zone } from '@/types/scas'
@@ -12,7 +11,6 @@ import AddDoorDialog from './components/add-door-dialog'
 import DoorZoneAssignModal from './components/door-zone-assign-modal'
 import AddDeviceDialog from './components/add-device-dialog'
 import DeviceAssignmentDialog from './components/device-assignment-dialog'
-import DoorCell from '@/components/door-cell'
 import CSVImportDialog from '@/components/custom/csv-import-dialog'
 import { IconPlus, IconEdit, IconTrash, IconUpload, IconLink } from '@tabler/icons-react'
 
@@ -25,7 +23,8 @@ const doorColumns: ColumnConfig[] = [
 const deviceColumns: ColumnConfig[] = [
   { key: 'name', label: 'Device Name', visible: true },
   { key: 'type', label: 'Type', visible: true },
-  { key: 'doorNames', label: 'Linked Doors', visible: true },
+  { key: 'zoneName', label: 'Zone', visible: true },
+  { key: 'relayCount', label: 'Relays', visible: true },
   { key: 'status', label: 'Status', visible: true },
   { key: 'actions', label: 'Actions', visible: true },
 ]
@@ -145,19 +144,14 @@ export default function DoorsDevicesPage() {
           rawType === 'LOCK' ? DeviceType.LOCK :
           DeviceType.READER
 
-        const parsedDoorIds = row.doorIds
-          ? (Array.isArray(row.doorIds) ? row.doorIds : String(row.doorIds).split(','))
-              .map((v: any) => Number(v))
-              .filter((n: number) => Number.isFinite(n))
-          : []
-
         const newDevice: DeviceCreateDTO = {
           type: deviceType,
           serialNumber: String(row.serialNumber || row.name || `SN-${Date.now()}`),
           modelName: String(row.modelName || row.name || 'Imported Device'),
           ip: row.ip ? String(row.ip) : undefined,
           port: row.port ? Number(row.port) : undefined,
-          doorIds: parsedDoorIds,
+          zoneId: Number(row.zoneId),
+          relayCount: row.relayCount ? Number(row.relayCount) : 1,
         }
         
         await addDevice(newDevice)
@@ -293,7 +287,7 @@ export default function DoorsDevicesPage() {
                 data={devices}
                 columns={deviceColumns}
                 itemsPerPage={10}
-                searchableFields={['name', 'type', 'doorNames']}
+                searchableFields={['name', 'type', 'zoneName']}
               >
                 {({ data, visibleColumns }) => (
                   <div className='overflow-x-auto'>
@@ -310,11 +304,6 @@ export default function DoorsDevicesPage() {
                           <TableRow key={device.id}>
                             {visibleColumns.map(col => (
                               <TableCell key={`${device.id}-${col.key}`}>
-                                {col.key === 'status' && (
-                                  <Badge variant={device.status === 'online' ? 'default' : 'destructive'}>
-                                    {device.status}
-                                  </Badge>
-                                )}
                                 {col.key === 'name' && (
                                   <span className='font-medium cursor-pointer hover:text-blue-600' onClick={() => handleAssignDoors(device)}>
                                     {device.name}
@@ -349,9 +338,11 @@ export default function DoorsDevicesPage() {
                                 {!['status', 'name', 'actions'].includes(col.key) && (
                                   <>
                                     {col.key === 'type' && device.type}
-                                    {col.key === 'doorNames' && <DoorCell doorNames={device.doorNames || []} />}
+                                    {col.key === 'zoneName' && device.zoneName}
+                                    {col.key === 'relayCount' && device.relayCount}
                                   </>
                                 )}
+                                {col.key === 'status' && <span>{device.status}</span>}
                               </TableCell>
                             ))}
                           </TableRow>
@@ -382,6 +373,7 @@ export default function DoorsDevicesPage() {
         open={openDevice}
         onOpenChange={(s) => { if (!s) setCurrentDevice(null); setOpenDevice(s) }}
         current={currentDevice}
+        zones={zones}
         onSuccess={refreshDoorsAndDevices}
       />
       <DeviceAssignmentDialog
@@ -421,27 +413,27 @@ export default function DoorsDevicesPage() {
         open={importDeviceOpen}
         onOpenChange={setImportDeviceOpen}
         title='Import Devices'
-        description='Bulk import devices from a CSV file. Devices will be created with the provided information.'
+        description='Bulk import devices from a CSV file. Devices will be created in a selected zone with a defined relay capacity.'
         fields={[
           { key: 'name', label: 'Device Name', required: true, type: 'string' },
           { key: 'type', label: 'Device Type', required: false, type: 'enum', options: ['reader', 'controller', 'lock'] },
-          { key: 'doorIds', label: 'Door IDs', required: false, type: 'string' },
-          { key: 'doorNames', label: 'Door Names', required: false, type: 'string' },
+          { key: 'zoneId', label: 'Zone ID', required: true, type: 'string' },
+          { key: 'relayCount', label: 'Relay Count', required: true, type: 'number' },
           { key: 'status', label: 'Status', required: false, type: 'enum', options: ['online', 'offline'] },
         ]}
         exampleData={[
           {
             name: 'Main Entrance Reader',
             type: 'reader',
-            doorIds: 'door1,door2',
-            doorNames: 'Main Entrance,Side Entrance',
+            zoneId: '1',
+            relayCount: 4,
             status: 'online'
           },
           {
             name: 'Server Room Lock',
             type: 'lock',
-            doorIds: 'door3',
-            doorNames: 'Server Room Door',
+            zoneId: '2',
+            relayCount: 2,
             status: 'online'
           }
         ]}

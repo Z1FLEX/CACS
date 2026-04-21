@@ -125,6 +125,10 @@ export interface Device {
   accessStatus?: number
   ip?: string
   port?: number
+  zoneId?: string
+  zoneName?: string
+  relayCount?: number
+  availableRelayIndices?: string[]
   lastSeenAt?: string
   lastActivity?: string
   doorIds?: string[]

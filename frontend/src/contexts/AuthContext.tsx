@@ -7,6 +7,32 @@ interface User {
   role: string
 }
 
+const ROLE_PRIORITY = ['ADMIN', 'RESPONSABLE', 'USER'] as const
+
+function resolveEffectiveRole(role: unknown, roles: unknown): string {
+  const normalizedRoles = new Set<string>()
+
+  if (typeof role === 'string' && role.trim()) {
+    normalizedRoles.add(role.trim().toUpperCase())
+  }
+
+  if (Array.isArray(roles)) {
+    for (const value of roles) {
+      if (typeof value === 'string' && value.trim()) {
+        normalizedRoles.add(value.trim().toUpperCase())
+      }
+    }
+  }
+
+  for (const candidate of ROLE_PRIORITY) {
+    if (normalizedRoles.has(candidate)) {
+      return candidate
+    }
+  }
+
+  return ''
+}
+
 function normalizeUser(raw: unknown): User | null {
   if (!raw || typeof raw !== 'object') {
     return null
@@ -21,12 +47,7 @@ function normalizeUser(raw: unknown): User | null {
 
   const id = typeof value.id === 'number' ? value.id : Number(value.id)
   const email = typeof value.email === 'string' ? value.email : ''
-  const explicitRole = typeof value.role === 'string' ? value.role : ''
-  const derivedRole =
-    Array.isArray(value.roles) && typeof value.roles[0] === 'string'
-      ? value.roles[0]
-      : ''
-  const role = (explicitRole || derivedRole).toUpperCase()
+  const role = resolveEffectiveRole(value.role, value.roles)
 
   if (!Number.isFinite(id) || !email || !role) {
     return null

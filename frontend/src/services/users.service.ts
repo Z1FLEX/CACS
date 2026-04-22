@@ -3,6 +3,7 @@
  * When VITE_API_BASE_URL is set, mutations and load go to the backend and sync to the store.
  */
 import type { User } from '@/types/scas'
+import { resolveEffectiveRole } from '@/lib/rbac'
 import {
   getUsers as storeGetUsers,
   subscribeUsers as storeSubscribeUsers,
@@ -32,11 +33,7 @@ function normalizeUser(u: any): User {
       ? u.profileIds.map((p: unknown) => String(p))
       : undefined,
     status: (u.status || 'ACTIVE').toUpperCase(),
-    role: (
-      (Array.isArray(u.roles) && u.roles.length > 0 ? u.roles[0] : null) ||
-      u.role ||
-      'USER'
-    ).toUpperCase(),
+    role: resolveEffectiveRole(u.role, u.roles) || 'USER',
     name: u.name || [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email,
     createdAt,
   }

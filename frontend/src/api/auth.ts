@@ -14,7 +14,8 @@ export interface LoginResponse {
   user: {
     id: number
     email: string
-    role: string
+    role?: string
+    roles?: string[]
   }
 }
 

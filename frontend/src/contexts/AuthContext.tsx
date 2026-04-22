@@ -7,6 +7,34 @@ interface User {
   role: string
 }
 
+function normalizeUser(raw: unknown): User | null {
+  if (!raw || typeof raw !== 'object') {
+    return null
+  }
+
+  const value = raw as {
+    id?: unknown
+    email?: unknown
+    role?: unknown
+    roles?: unknown
+  }
+
+  const id = typeof value.id === 'number' ? value.id : Number(value.id)
+  const email = typeof value.email === 'string' ? value.email : ''
+  const explicitRole = typeof value.role === 'string' ? value.role : ''
+  const derivedRole =
+    Array.isArray(value.roles) && typeof value.roles[0] === 'string'
+      ? value.roles[0]
+      : ''
+  const role = (explicitRole || derivedRole).toUpperCase()
+
+  if (!Number.isFinite(id) || !email || !role) {
+    return null
+  }
+
+  return { id, email, role }
+}
+
 interface AuthContextType {
   user: User | null
   setUser: (user: User | null) => void
@@ -35,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           // Validate token by making a simple API call
           // If the token is invalid, the interceptor will handle refresh or logout
-          setUser(JSON.parse(savedUser))
+          setUser(normalizeUser(JSON.parse(savedUser)))
         } catch (error) {
           console.error('Token validation failed:', error)
           // Clear invalid tokens
@@ -63,16 +91,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true)
     try {
       const response = await login({ email, password })
+      const normalizedUser = normalizeUser(response.user)
+
+      if (!normalizedUser) {
+        throw new Error('Login response is missing a valid user role')
+      }
       
       // Store tokens
       localStorage.setItem('accessToken', response.accessToken)
       localStorage.setItem('refreshToken', response.refreshToken)
       
       // Set user
-      setUser(response.user)
+      setUser(normalizedUser)
       
       // Set pending user for OTP if needed
-      setPendingUser(response.user)
+      setPendingUser(normalizedUser)
     } catch (error: any) {
       console.error('Login failed:', error)
       throw new Error(error.response?.data?.message || 'Login failed')

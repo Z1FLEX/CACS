@@ -2,6 +2,7 @@
  * Doors service – all door CRUD and subscriptions. UI must use this instead of store/mock.
  */
 import type { Door } from '@/types/scas'
+import type { DoorCreateDTO, DoorUpdateDTO } from '@/types/door'
 import {
   getDoors as storeGetDoors,
   subscribeDoors as storeSubscribeDoors,
@@ -42,13 +43,13 @@ export function subscribeDoors(cb: DoorSubscriber): () => void {
   return storeSubscribeDoors(cb)
 }
 
-export async function addDoor(payload: Record<string, unknown>): Promise<void> {
-  await apiCreateDoor(payload as Partial<Door>)
+export async function addDoor(payload: DoorCreateDTO): Promise<void> {
+  await apiCreateDoor(payload)
   await loadDoors()
 }
 
-export async function updateDoor(id: string, payload: Record<string, unknown>): Promise<void> {
-  await apiUpdateDoor(id, payload as Partial<Door>)
+export async function updateDoor(id: string, payload: DoorUpdateDTO): Promise<void> {
+  await apiUpdateDoor(id, payload)
   await loadDoors()
 }
 

@@ -18,6 +18,7 @@ import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@
 import { SelectDropdown } from '@/components/select-dropdown'
 import { addDoor, updateDoor } from '@/services'
 import type { Device, Door, Zone } from '@/types/scas'
+import type { DoorCreateDTO, DoorUpdateDTO } from '@/types/door'
 import { IconCheck, IconSelector } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 
@@ -138,7 +139,7 @@ export default function AddDoorDialog({ open, onOpenChange, current, zones, devi
   }, [form, relayOptions])
 
   const onSubmit = async (values: FormValues) => {
-    const payload = {
+    const payload: DoorCreateDTO | DoorUpdateDTO = {
       name: values.name,
       zoneId: Number(values.zoneId),
       location: values.location || '',

@@ -15,12 +15,12 @@ export interface DeviceCreateDTO {
 }
 
 export interface DeviceUpdateDTO {
-  type?: string
-  serialNumber?: string
-  modelName?: string
-  status?: string
-  ip?: string
-  port?: number
-  zoneId?: number
-  relayCount?: number
+  type: DeviceType
+  serialNumber: string
+  modelName: string
+  status?: 'ONLINE' | 'OFFLINE'
+  ip: string
+  port: number
+  zoneId: number
+  relayCount: number
 }

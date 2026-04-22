@@ -5,6 +5,7 @@
 import { api } from '@/api/client'
 import type { User, AccessCard, Zone, Door, Device, Profile, Schedule, AccessCardEnrollmentStatus } from '@/types/scas'
 import type { DeviceCreateDTO, DeviceUpdateDTO } from '@/types/device'
+import type { DoorCreateDTO, DoorUpdateDTO } from '@/types/door'
 
 const hasBase = () =>
   typeof import.meta.env.VITE_API_BASE_URL === 'string' &&
@@ -112,12 +113,12 @@ export async function apiGetDoors(): Promise<Door[]> {
   return Array.isArray(data) ? data : []
 }
 
-export async function apiCreateDoor(payload: Partial<Door>): Promise<Door> {
+export async function apiCreateDoor(payload: DoorCreateDTO): Promise<Door> {
   const { data } = await api.post<Door>('/api/doors', payload)
   return data
 }
 
-export async function apiUpdateDoor(id: string, payload: Partial<Door>): Promise<Door> {
+export async function apiUpdateDoor(id: string, payload: DoorUpdateDTO): Promise<Door> {
   const { data } = await api.put<Door>(`/api/doors/${id}`, payload)
   return data
 }

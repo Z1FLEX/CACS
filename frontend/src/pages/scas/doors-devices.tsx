@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-wrapper'
 import type { Door, Device, Zone } from '@/types/scas'
 import { DeviceType, type DeviceCreateDTO } from '@/types/device'
+import type { DoorCreateDTO } from '@/types/door'
 import { subscribeDoors, getDoors, loadDoors, removeDoor, subscribeDevices, getDevices, loadDevices, removeDevice, addDoor, addDevice, subscribeZones, loadZones, getZones } from '@/services'
 import { useAuth } from '@/contexts/AuthContext'
 import AddDoorDialog from './components/add-door-dialog'
@@ -96,18 +97,13 @@ export default function DoorsDevicesPage() {
     
     for (const row of validRows) {
       try {
-        const newDoor: Door = {
-          id: String(Date.now() + Math.random()),
+        const newDoor: DoorCreateDTO = {
           name: row.name,
-          zoneId: String(row.zoneId || ''),
+          zoneId: Number(row.zoneId),
           location: row.location || '',
         }
-        
-        await addDoor({
-          name: newDoor.name,
-          zoneId: Number(newDoor.zoneId),
-          location: newDoor.location || '',
-        })
+
+        await addDoor(newDoor)
         importedCount++
       } catch (error) {
         console.error('Failed to import door:', error)

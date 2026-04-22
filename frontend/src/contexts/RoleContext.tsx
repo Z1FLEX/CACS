@@ -1,4 +1,5 @@
-import { createContext, useContext, ReactNode, useState } from 'react'
+import { createContext, useContext, ReactNode, useEffect, useState } from 'react'
+import { useAuth } from './AuthContext'
 
 export type UserRole = 'ADMIN' | 'RESPONSABLE' | 'USER'
 
@@ -10,7 +11,15 @@ interface RoleContextType {
 const RoleContext = createContext<RoleContextType | undefined>(undefined)
 
 export function RoleProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const [role, setRole] = useState<UserRole>('ADMIN')
+
+  useEffect(() => {
+    const nextRole = user?.role?.toUpperCase()
+    if (nextRole === 'ADMIN' || nextRole === 'RESPONSABLE' || nextRole === 'USER') {
+      setRole(nextRole)
+    }
+  }, [user?.role])
 
   return (
     <RoleContext.Provider value={{ role, setRole }}>

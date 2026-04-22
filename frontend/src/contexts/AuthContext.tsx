@@ -33,7 +33,33 @@ function resolveEffectiveRole(role: unknown, roles: unknown): string {
   return ''
 }
 
-function normalizeUser(raw: unknown): User | null {
+function extractRolesFromToken(token: string | null): string[] {
+  if (!token) {
+    return []
+  }
+
+  try {
+    const [, payload] = token.split('.')
+    if (!payload) {
+      return []
+    }
+
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, '=')
+    const decodedPayload = JSON.parse(atob(paddedPayload)) as { roles?: unknown }
+
+    if (!Array.isArray(decodedPayload.roles)) {
+      return []
+    }
+
+    return decodedPayload.roles.filter((value): value is string => typeof value === 'string')
+  } catch (error) {
+    console.error('Failed to decode access token roles:', error)
+    return []
+  }
+}
+
+function normalizeUser(raw: unknown, tokenRoles: string[] = []): User | null {
   if (!raw || typeof raw !== 'object') {
     return null
   }
@@ -47,7 +73,7 @@ function normalizeUser(raw: unknown): User | null {
 
   const id = typeof value.id === 'number' ? value.id : Number(value.id)
   const email = typeof value.email === 'string' ? value.email : ''
-  const role = resolveEffectiveRole(value.role, value.roles)
+  const role = resolveEffectiveRole(value.role, [...tokenRoles, ...(Array.isArray(value.roles) ? value.roles : [])])
 
   if (!Number.isFinite(id) || !email || !role) {
     return null
@@ -79,12 +105,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       const accessToken = localStorage.getItem('accessToken')
       const savedUser = localStorage.getItem('user')
+      const tokenRoles = extractRolesFromToken(accessToken)
 
       if (accessToken && savedUser) {
         try {
           // Validate token by making a simple API call
           // If the token is invalid, the interceptor will handle refresh or logout
-          setUser(normalizeUser(JSON.parse(savedUser)))
+          setUser(normalizeUser(JSON.parse(savedUser), tokenRoles))
         } catch (error) {
           console.error('Token validation failed:', error)
           // Clear invalid tokens
@@ -112,7 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true)
     try {
       const response = await login({ email, password })
-      const normalizedUser = normalizeUser(response.user)
+      const tokenRoles = extractRolesFromToken(response.accessToken)
+      const normalizedUser = normalizeUser(response.user, tokenRoles)
 
       if (!normalizedUser) {
         throw new Error('Login response is missing a valid user role')

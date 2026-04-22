@@ -9,9 +9,8 @@ import { DeviceType, type DeviceCreateDTO } from '@/types/device'
 import { subscribeDoors, getDoors, loadDoors, removeDoor, subscribeDevices, getDevices, loadDevices, removeDevice, addDoor, addDevice, subscribeZones, loadZones, getZones } from '@/services'
 import AddDoorDialog from './components/add-door-dialog'
 import AddDeviceDialog from './components/add-device-dialog'
-import DeviceAssignmentDialog from './components/device-assignment-dialog'
 import CSVImportDialog from '@/components/custom/csv-import-dialog'
-import { IconPlus, IconEdit, IconTrash, IconUpload, IconLink } from '@tabler/icons-react'
+import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
 
 const doorColumns: ColumnConfig[] = [
   { key: 'name', label: 'Door Name', visible: true },
@@ -40,8 +39,6 @@ export default function DoorsDevicesPage() {
   const [importDeviceOpen, setImportDeviceOpen] = useState(false)
   const [currentDoor, setCurrentDoor] = useState<any | null>(null)
   const [currentDevice, setCurrentDevice] = useState<any | null>(null)
-  const [assignmentDevice, setAssignmentDevice] = useState<any | null>(null)
-  const [openAssignment, setOpenAssignment] = useState(false)
 
   useEffect(() => {
     const u1 = subscribeDoors(setDoors)
@@ -85,11 +82,6 @@ export default function DoorsDevicesPage() {
     if (confirm(`Delete device ${id}?`)) {
       await removeDevice(id)
     }
-  }
-
-  const handleAssignDoors = (device: any) => {
-    setAssignmentDevice(device)
-    setOpenAssignment(true)
   }
 
   const refreshDoorsAndDevices = async () => {
@@ -285,20 +277,10 @@ export default function DoorsDevicesPage() {
                             {visibleColumns.map(col => (
                               <TableCell key={`${device.id}-${col.key}`}>
                                 {col.key === 'name' && (
-                                  <span className='font-medium cursor-pointer hover:text-blue-600' onClick={() => handleAssignDoors(device)}>
-                                    {device.name}
-                                  </span>
+                                  <span className='font-medium'>{device.name}</span>
                                 )}
                                 {col.key === 'actions' && (
                                   <div className='flex gap-2'>
-                                    <Button
-                                      variant='ghost'
-                                      size='sm'
-                                      onClick={() => handleAssignDoors(device)}
-                                      title='Assign doors'
-                                    >
-                                      <IconLink size={16} />
-                                    </Button>
                                     <Button
                                       variant='ghost'
                                       size='sm'
@@ -351,13 +333,7 @@ export default function DoorsDevicesPage() {
         zones={zones}
         onSuccess={refreshDoorsAndDevices}
       />
-      <DeviceAssignmentDialog
-        open={openAssignment}
-        onOpenChange={(s) => { if (!s) setAssignmentDevice(null); setOpenAssignment(s) }}
-        device={assignmentDevice}
-        onSuccess={refreshDoorsAndDevices}
-      />
-      
+
       <CSVImportDialog
         open={importDoorOpen}
         onOpenChange={setImportDoorOpen}

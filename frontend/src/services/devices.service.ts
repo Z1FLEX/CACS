@@ -37,8 +37,6 @@ function normalizeDevice(d: unknown): Device {
     availableRelayIndices: Array.isArray(raw.availableRelayIndices)
       ? raw.availableRelayIndices.map((value) => String(value))
       : [],
-    doorIds:   ((raw.doorIds as number[]) || []).map(String),
-    doorNames: (raw.doorNames as string[]) || [],
     name:      (raw.name as string) ?? (raw.serialNumber as string) ?? '',
     type:      VALID_TYPES.has(rawType)   ? rawType   : 'READER',   // safe fallback + log
     status:    VALID_STATUSES.has(rawStatus) ? rawStatus : 'OFFLINE',

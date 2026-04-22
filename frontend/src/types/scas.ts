@@ -134,8 +134,6 @@ export interface Device {
   availableRelayIndices?: string[]
   lastSeenAt?: string
   lastActivity?: string
-  doorIds?: string[]
-  doorNames?: string[]
   createdAt?: string
   deletedAt?: string | null
 }

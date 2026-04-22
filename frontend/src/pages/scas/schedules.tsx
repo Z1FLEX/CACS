@@ -9,6 +9,16 @@ import { Trash2, X } from 'lucide-react'
 import { addMinutes, format } from "date-fns"
 import { Button } from '@/components/custom/button'
 import { toast } from '@/components/ui/use-toast'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { EmptyState } from '@/components/custom/empty-state'
 import { CalendarEvent } from './data/schema'
 import { 
@@ -30,6 +40,8 @@ export default function SchedulesPage() {
   const [isCreateScheduleModalOpen, setIsCreateScheduleModalOpen] = useState(false)
   const [newScheduleName, setNewScheduleName] = useState('')
   const [isCreatingSchedule, setIsCreatingSchedule] = useState(false)
+  const [scheduleDeleteTarget, setScheduleDeleteTarget] = useState<ScheduleDTO | null>(null)
+  const [isDeletingSchedule, setIsDeletingSchedule] = useState(false)
   const selectedSchedule = schedules.find(schedule => schedule.id === selectedScheduleId) || null
   const selectedScheduleName = selectedSchedule?.name || ''
 
@@ -106,6 +118,29 @@ export default function SchedulesPage() {
       })
     } finally {
       setIsCreatingSchedule(false)
+    }
+  }
+
+  const handleDeleteSchedule = async () => {
+    if (!scheduleDeleteTarget) return
+
+    try {
+      setIsDeletingSchedule(true)
+      await scheduleAPI.deleteSchedule(scheduleDeleteTarget.id)
+      await refreshSchedules()
+      setScheduleDeleteTarget(null)
+      toast({
+        title: "Schedule deleted successfully!",
+      })
+    } catch (error) {
+      console.error('Failed to delete schedule:', error)
+      toast({
+        title: "Error deleting schedule",
+        description: "Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsDeletingSchedule(false)
     }
   }
 
@@ -270,6 +305,15 @@ const handleSaveEvent = async () => {
               <Button variant='outline' onClick={() => setIsCreateScheduleModalOpen(true)}>
                 + Create Schedule
               </Button>
+              <Button
+                variant='outline'
+                onClick={() => setScheduleDeleteTarget(selectedSchedule)}
+                disabled={!selectedSchedule}
+                className='gap-2 text-destructive hover:text-destructive'
+              >
+                <Trash2 className='h-4 w-4' />
+                Delete Schedule
+              </Button>
               <Button variant='outline' onClick={handleAddEvent} disabled={!selectedScheduleId}>
                 + Add Time
               </Button>
@@ -410,6 +454,37 @@ const handleSaveEvent = async () => {
           </div>
         </div>
       )}
+
+      <AlertDialog
+        open={!!scheduleDeleteTarget}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingSchedule) {
+            setScheduleDeleteTarget(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete schedule</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the schedule "{scheduleDeleteTarget?.name}". Existing time slots under this schedule will no longer be available in the calendar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingSchedule}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void handleDeleteSchedule()
+              }}
+              disabled={isDeletingSchedule}
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+            >
+              {isDeletingSchedule ? 'Deleting...' : 'Delete Schedule'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

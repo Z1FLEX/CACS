@@ -175,7 +175,7 @@ const handleSaveEvent = async () => {
 
   const eventToSave: CalendarEvent = {
     ...currentEvent,
-    title: currentEvent.title.trim() || selectedScheduleName || 'Event',
+    title: selectedScheduleName || 'Time Slot',
     scheduleId: currentEvent.scheduleId ?? selectedScheduleId,
   }
 
@@ -271,7 +271,7 @@ const handleSaveEvent = async () => {
                 + Create Schedule
               </Button>
               <Button variant='outline' onClick={handleAddEvent} disabled={!selectedScheduleId}>
-                + Add Event
+                + Add Time
               </Button>
             </div>
           </div>
@@ -341,16 +341,8 @@ const handleSaveEvent = async () => {
         <div className="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white shadow-lg rounded-lg p-6 w-96">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">{currentEvent.id ? 'Edit Event' : 'Add Event'}</h3>
+              <h3 className="text-lg font-semibold">{currentEvent.id ? 'Edit Time' : 'Add Time'}</h3>
               <Button variant="ghost" onClick={() => setIsEventModalOpen(false)}><X /></Button>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Event Name</label>
-              <Input
-                placeholder="Event name"
-                value={currentEvent.title}
-                onChange={(e) => setCurrentEvent({ ...currentEvent, title: e.target.value })}
-              />
             </div>
 
             <div className="mb-4">
@@ -412,7 +404,7 @@ const handleSaveEvent = async () => {
               )}
               <div>
                 <Button onClick={() => setIsEventModalOpen(false)} variant="outline" className="mr-2">Cancel</Button>
-                <Button onClick={handleSaveEvent} disabled={!currentEvent.dayIndex || !currentEvent.title.trim()}>Save</Button>
+                <Button onClick={handleSaveEvent} disabled={!currentEvent.dayIndex}>Save</Button>
               </div>
             </div>
           </div>

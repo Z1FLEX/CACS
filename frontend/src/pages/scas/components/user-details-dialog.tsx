@@ -12,8 +12,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDateTime } from '@/lib/date-time'
-import type { User, AccessCard } from '@/types/scas'
-import { subscribeAccessCards, getAccessCards, loadAccessCards, updateUser } from '@/services'
+import type { User, AccessCard, Profile } from '@/types/scas'
+import { subscribeAccessCards, getAccessCards, loadAccessCards, updateUser, subscribeProfiles, getProfiles, loadProfiles } from '@/services'
 import AssignCardDialog from './assign-card-dialog'
 import { IconCreditCard, IconTrash, IconPlus } from '@tabler/icons-react'
 
@@ -25,6 +25,7 @@ interface Props {
 
 export default function UserDetailsDialog({ open, onOpenChange, user }: Props) {
   const [cards, setCards] = useState<AccessCard[]>(() => getAccessCards())
+  const [profiles, setProfiles] = useState<Profile[]>(() => getProfiles())
   const [assignCardOpen, setAssignCardOpen] = useState(false)
   const { toast } = useToast()
 
@@ -34,7 +35,14 @@ export default function UserDetailsDialog({ open, onOpenChange, user }: Props) {
     return unsub
   }, [])
 
+  useEffect(() => {
+    const unsub = subscribeProfiles(setProfiles)
+    loadProfiles().then(() => {})
+    return unsub
+  }, [])
+
   const userCard = user?.cardId ? cards.find(c => c.id === user.cardId) : null
+  const userProfiles = profiles.filter((profile) => user?.profileIds?.includes(profile.id))
 
   const handleUnassignCard = async () => {
     if (!user || !userCard) return
@@ -115,6 +123,27 @@ export default function UserDetailsDialog({ open, onOpenChange, user }: Props) {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className='text-lg'>Assigned Profiles</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {userProfiles.length > 0 ? (
+                  <div className='flex flex-wrap gap-2'>
+                    {userProfiles.map((profile) => (
+                      <Badge key={profile.id} variant='secondary'>
+                        {profile.name}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className='text-sm text-muted-foreground'>
+                    No access profile is currently assigned to this user.
+                  </p>
+                )}
               </CardContent>
             </Card>
 

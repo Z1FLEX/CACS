@@ -13,6 +13,7 @@ import {
   apiGetUsers,
   apiCreateUser,
   apiUpdateUser,
+  apiAssignUserProfiles,
   apiDeleteUser,
 } from '@/api/scas'
 
@@ -105,6 +106,15 @@ function userToApiBody(user: User): Record<string, unknown> {
 
 export async function updateUser(user: User): Promise<void> {
   await apiUpdateUser(user.id, userToApiBody(user) as Partial<User>)
+  await loadUsers()
+}
+
+export async function assignUserProfiles(userId: string, profileIds: string[]): Promise<void> {
+  const ids = profileIds
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id))
+
+  await apiAssignUserProfiles(userId, ids)
   await loadUsers()
 }
 

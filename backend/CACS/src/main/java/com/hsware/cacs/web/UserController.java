@@ -2,6 +2,7 @@ package com.hsware.cacs.web;
 
 import com.hsware.cacs.dto.UserDTO;
 import com.hsware.cacs.dto.UserCreateDTO;
+import com.hsware.cacs.dto.UserProfileAssignmentDTO;
 import com.hsware.cacs.dto.UserUpdateDTO;
 import com.hsware.cacs.service.UserService;
 import jakarta.validation.Valid;
@@ -46,6 +47,14 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> update(@PathVariable Integer id, @Valid @RequestBody UserUpdateDTO userUpdateDTO) {
         return userService.update(id, userUpdateDTO)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}/profiles")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserDTO> assignProfiles(@PathVariable Integer id, @Valid @RequestBody UserProfileAssignmentDTO body) {
+        return userService.assignProfiles(id, body)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

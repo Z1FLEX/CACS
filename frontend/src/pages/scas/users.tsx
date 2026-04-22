@@ -21,8 +21,9 @@ import type { User } from '@/types/scas'
 import { subscribeUsers, getUsers, loadUsers, removeUser, addUser } from '@/services'
 import AddUserDialog from './components/add-user-dialog'
 import UserDetailsDialog from './components/user-details-dialog'
+import AssignProfileDialog from './components/assign-profile-dialog'
 import CSVImportDialog from '@/components/custom/csv-import-dialog'
-import { IconPlus, IconEdit, IconTrash, IconUpload } from '@tabler/icons-react'
+import { IconPlus, IconEdit, IconTrash, IconUpload, IconShieldCheck } from '@tabler/icons-react'
 import { buildNewUserDraft, userImportExampleData, userImportFields } from './lib/user-create'
 
 const userColumns: ColumnConfig[] = [
@@ -41,8 +42,10 @@ export default function UsersPage() {
   const [open, setOpen] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [assignProfileOpen, setAssignProfileOpen] = useState(false)
   const [current, setCurrent] = useState<User | null>(null)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [profileTarget, setProfileTarget] = useState<User | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [error] = useState<string | null>(null) // Placeholder: set second element when API/service fails
 
@@ -80,6 +83,14 @@ export default function UsersPage() {
   const handleDeleteUser = (id: string) => {
     const u = users.find(x => x.id === id)
     if (u) setDeleteTarget({ id: u.id, name: u.name })
+  }
+
+  const handleAssignProfile = (id: string) => {
+    const u = users.find(x => x.id === id)
+    if (u) {
+      setProfileTarget(u)
+      setAssignProfileOpen(true)
+    }
   }
 
   const confirmDeleteUser = async () => {
@@ -210,6 +221,14 @@ export default function UsersPage() {
                                 <Button
                                   variant='ghost'
                                   size='sm'
+                                  onClick={() => handleAssignProfile(user.id)}
+                                  title='Assign profiles'
+                                >
+                                  <IconShieldCheck size={16} />
+                                </Button>
+                                <Button
+                                  variant='ghost'
+                                  size='sm'
                                   onClick={() => handleEditUser(user.id)}
                                 >
                                   <IconEdit size={16} />
@@ -242,6 +261,14 @@ export default function UsersPage() {
           )}
         </CardContent>
         <AddUserDialog open={open} onOpenChange={(s) => { if (!s) setCurrent(null); setOpen(s) }} current={current} />
+        <AssignProfileDialog
+          open={assignProfileOpen}
+          onOpenChange={(state) => {
+            if (!state) setProfileTarget(null)
+            setAssignProfileOpen(state)
+          }}
+          user={profileTarget}
+        />
         <UserDetailsDialog open={detailsOpen} onOpenChange={setDetailsOpen} user={selectedUser} />
         <CSVImportDialog
           open={importOpen}

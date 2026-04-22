@@ -2,6 +2,7 @@ package com.hsware.cacs.service;
 
 import com.hsware.cacs.dto.UserDTO;
 import com.hsware.cacs.dto.UserCreateDTO;
+import com.hsware.cacs.dto.UserProfileAssignmentDTO;
 import com.hsware.cacs.dto.UserUpdateDTO;
 import com.hsware.cacs.entity.AccessCard;
 import com.hsware.cacs.entity.User;
@@ -52,6 +53,31 @@ public class UserService {
         AccessCard previousCard = user.getAccessCard();
         dtoMapper.updateUserFromDTO(userUpdateDTO, user);
         synchronizeCardState(user, previousCard, user.getAccessCard());
+        user = userRepository.save(user);
+        return Optional.of(dtoMapper.toUserDTO(user));
+    }
+
+    @Transactional
+    public Optional<UserDTO> assignProfiles(Integer id, UserProfileAssignmentDTO userProfileAssignmentDTO) {
+        Optional<User> existing = userRepository.findByIdAndDeletedAtIsNull(id);
+        if (existing.isEmpty()) return Optional.empty();
+
+        User user = existing.get();
+        dtoMapper.updateUserFromDTO(
+            new UserUpdateDTO(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                userProfileAssignmentDTO.getProfileIds()
+            ),
+            user
+        );
         user = userRepository.save(user);
         return Optional.of(dtoMapper.toUserDTO(user));
     }

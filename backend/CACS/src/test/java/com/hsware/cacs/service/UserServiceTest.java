@@ -1,6 +1,7 @@
 package com.hsware.cacs.service;
 
 import com.hsware.cacs.dto.UserDTO;
+import com.hsware.cacs.dto.UserProfileAssignmentDTO;
 import com.hsware.cacs.dto.UserUpdateDTO;
 import com.hsware.cacs.entity.AccessCard;
 import com.hsware.cacs.entity.User;
@@ -17,6 +18,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
@@ -79,5 +81,55 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.update(10, new UserUpdateDTO()))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("This card is already assigned to another user");
+    }
+
+    @Test
+    void assignProfilesReplacesUserProfiles() {
+        User user = User.builder().id(10).status("ACTIVE").build();
+        UserDTO expectedDto = new UserDTO();
+        UserProfileAssignmentDTO assignmentDTO = new UserProfileAssignmentDTO(java.util.Set.of(3, 7));
+
+        when(userRepository.findByIdAndDeletedAtIsNull(10)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(dtoMapper.toUserDTO(user)).thenReturn(expectedDto);
+
+        userService.assignProfiles(10, assignmentDTO);
+
+        org.mockito.Mockito.verify(dtoMapper).updateUserFromDTO(
+            argThat(dto -> dto.getProfileIds() != null && dto.getProfileIds().equals(java.util.Set.of(3, 7))),
+            org.mockito.Mockito.same(user)
+        );
+    }
+
+    @Test
+    void assignProfilesAllowsClearingAllProfiles() {
+        User user = User.builder().id(10).status("ACTIVE").build();
+        UserDTO expectedDto = new UserDTO();
+        UserProfileAssignmentDTO assignmentDTO = new UserProfileAssignmentDTO(java.util.Set.of());
+
+        when(userRepository.findByIdAndDeletedAtIsNull(10)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(dtoMapper.toUserDTO(user)).thenReturn(expectedDto);
+
+        userService.assignProfiles(10, assignmentDTO);
+
+        org.mockito.Mockito.verify(dtoMapper).updateUserFromDTO(
+            argThat(dto -> dto.getProfileIds() != null && dto.getProfileIds().isEmpty()),
+            org.mockito.Mockito.same(user)
+        );
+    }
+
+    @Test
+    void assignProfilesPropagatesUnknownProfileValidation() {
+        User user = User.builder().id(10).status("ACTIVE").build();
+
+        when(userRepository.findByIdAndDeletedAtIsNull(10)).thenReturn(Optional.of(user));
+        doAnswer(invocation -> {
+            throw new IllegalArgumentException("Unknown profiles: [999]");
+        }).when(dtoMapper).updateUserFromDTO(any(UserUpdateDTO.class), any(User.class));
+
+        assertThatThrownBy(() -> userService.assignProfiles(10, new UserProfileAssignmentDTO(java.util.Set.of(999))))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Unknown profiles: [999]");
     }
 }

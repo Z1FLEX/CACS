@@ -39,6 +39,11 @@ export async function apiUpdateUser(id: string, payload: Partial<User>): Promise
   return data
 }
 
+export async function apiAssignUserProfiles(id: string, profileIds: number[]): Promise<User> {
+  const { data } = await api.put<User>(`/api/users/${id}/profiles`, { profileIds })
+  return data
+}
+
 export async function apiDeleteUser(id: string): Promise<void> {
   await api.delete(`/api/users/${id}`)
 }

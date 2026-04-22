@@ -187,7 +187,7 @@ export default function AddDeviceDialog({ open, onOpenChange, current, zones, on
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Zone</FormLabel>
-                  <Popover open={zonePickerOpen} onOpenChange={setZonePickerOpen}>
+                  <Popover modal open={zonePickerOpen} onOpenChange={setZonePickerOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button

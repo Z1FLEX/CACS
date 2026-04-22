@@ -188,7 +188,7 @@ export default function AddDoorDialog({ open, onOpenChange, current, zones, devi
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Zone</FormLabel>
-                  <Popover open={zonePickerOpen} onOpenChange={setZonePickerOpen}>
+                  <Popover modal open={zonePickerOpen} onOpenChange={setZonePickerOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -235,7 +235,7 @@ export default function AddDoorDialog({ open, onOpenChange, current, zones, devi
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Device</FormLabel>
-                  <Popover open={devicePickerOpen} onOpenChange={setDevicePickerOpen}>
+                  <Popover modal open={devicePickerOpen} onOpenChange={setDevicePickerOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button

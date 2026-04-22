@@ -7,6 +7,7 @@ import com.hsware.cacs.service.DeviceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import jakarta.persistence.EntityNotFoundException;
@@ -22,6 +23,7 @@ public class DeviceController {
     private final DeviceService deviceService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','RESPONSABLE')")
     public List<DeviceDTO> list(
         @RequestParam(required = false) Integer zoneId,
         @RequestParam(required = false) Boolean available
@@ -30,6 +32,7 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','RESPONSABLE')")
     public ResponseEntity<DeviceDTO> get(@PathVariable Integer id) {
         return deviceService.findById(id)
                 .map(ResponseEntity::ok)
@@ -37,12 +40,14 @@ public class DeviceController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<DeviceDTO> create(@Valid @RequestBody DeviceCreateDTO body) {
         DeviceDTO created = deviceService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<DeviceDTO> update(@PathVariable Integer id, @Valid @RequestBody DeviceUpdateDTO body) {
         try {
             DeviceDTO updated = deviceService.update(id, body);
@@ -53,6 +58,7 @@ public class DeviceController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         return deviceService.delete(id)
                 ? ResponseEntity.noContent().build()

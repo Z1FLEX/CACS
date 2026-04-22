@@ -7,6 +7,7 @@ import com.hsware.cacs.service.ZoneService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,11 +21,13 @@ public class ZoneController {
     private final ZoneService zoneService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','RESPONSABLE')")
     public List<ZoneDTO> list() {
         return zoneService.findAll();
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','RESPONSABLE')")
     public ResponseEntity<ZoneDTO> get(@PathVariable Integer id) {
         return zoneService.findById(id)
                 .map(ResponseEntity::ok)
@@ -32,12 +35,14 @@ public class ZoneController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ZoneDTO> create(@RequestBody ZoneCreateDTO body) {
         ZoneDTO created = zoneService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ZoneDTO> update(@PathVariable Integer id, @RequestBody ZoneUpdateDTO body) {
         return zoneService.update(id, body)
                 .map(ResponseEntity::ok)
@@ -45,6 +50,7 @@ public class ZoneController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         return zoneService.delete(id)
                 ? ResponseEntity.noContent().build()

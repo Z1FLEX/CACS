@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -56,6 +56,7 @@ type FormValues = z.infer<typeof schema>
 
 export default function AddDeviceDialog({ open, onOpenChange, current, zones, onSuccess }: Props) {
   const [zonePickerOpen, setZonePickerOpen] = useState(false)
+  const zoneSearchInputRef = useRef<HTMLInputElement>(null)
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -92,6 +93,18 @@ export default function AddDeviceDialog({ open, onOpenChange, current, zones, on
       })
     }
   }, [current, form])
+
+  useEffect(() => {
+    if (!zonePickerOpen) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      zoneSearchInputRef.current?.focus()
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [zonePickerOpen])
 
   const selectedZone = zones.find((zone) => zone.id === form.watch('zoneId'))
 
@@ -201,9 +214,13 @@ export default function AddDeviceDialog({ open, onOpenChange, current, zones, on
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0' align='start'>
+                    <PopoverContent
+                      className='w-[var(--radix-popover-trigger-width)] p-0'
+                      align='start'
+                      onOpenAutoFocus={(event) => event.preventDefault()}
+                    >
                       <Command>
-                        <CommandInput placeholder='Search zones...' />
+                        <CommandInput ref={zoneSearchInputRef} placeholder='Search zones...' />
                         <CommandList>
                           <CommandEmpty>No zones found.</CommandEmpty>
                           {zones.map((zone) => (

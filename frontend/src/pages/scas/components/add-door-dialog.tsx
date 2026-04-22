@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -59,6 +59,8 @@ interface Props {
 export default function AddDoorDialog({ open, onOpenChange, current, zones, devices, onSuccess }: Props) {
   const [zonePickerOpen, setZonePickerOpen] = useState(false)
   const [devicePickerOpen, setDevicePickerOpen] = useState(false)
+  const zoneSearchInputRef = useRef<HTMLInputElement>(null)
+  const deviceSearchInputRef = useRef<HTMLInputElement>(null)
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -138,6 +140,30 @@ export default function AddDoorDialog({ open, onOpenChange, current, zones, devi
     }
   }, [form, relayOptions])
 
+  useEffect(() => {
+    if (!zonePickerOpen) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      zoneSearchInputRef.current?.focus()
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [zonePickerOpen])
+
+  useEffect(() => {
+    if (!devicePickerOpen) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      deviceSearchInputRef.current?.focus()
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [devicePickerOpen])
+
   const onSubmit = async (values: FormValues) => {
     const payload: DoorCreateDTO | DoorUpdateDTO = {
       name: values.name,
@@ -202,9 +228,13 @@ export default function AddDoorDialog({ open, onOpenChange, current, zones, devi
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0' align='start'>
+                    <PopoverContent
+                      className='w-[var(--radix-popover-trigger-width)] p-0'
+                      align='start'
+                      onOpenAutoFocus={(event) => event.preventDefault()}
+                    >
                       <Command>
-                        <CommandInput placeholder='Search zones...' />
+                        <CommandInput ref={zoneSearchInputRef} placeholder='Search zones...' />
                         <CommandList>
                           <CommandEmpty>No zones found.</CommandEmpty>
                           {zones.map((zone) => (
@@ -250,9 +280,13 @@ export default function AddDoorDialog({ open, onOpenChange, current, zones, devi
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0' align='start'>
+                    <PopoverContent
+                      className='w-[var(--radix-popover-trigger-width)] p-0'
+                      align='start'
+                      onOpenAutoFocus={(event) => event.preventDefault()}
+                    >
                       <Command>
-                        <CommandInput placeholder='Search devices...' />
+                        <CommandInput ref={deviceSearchInputRef} placeholder='Search devices...' />
                         <CommandList>
                           <CommandEmpty>No devices available in this zone.</CommandEmpty>
                           <CommandItem

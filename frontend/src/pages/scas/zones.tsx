@@ -17,6 +17,7 @@ import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-w
 import { EmptyState } from '@/components/custom/empty-state'
 import type { Zone } from '@/types/scas'
 import { subscribeZones, getZones, loadZones, removeZone, addZone, zoneTypeForUi } from '@/services'
+import { useAuth } from '@/contexts/AuthContext'
 import AddZoneDialog from './components/add-zone-dialog'
 import AssignZoneManagerDialog from './components/assign-zone-manager-dialog'
 import CSVImportDialog from '@/components/custom/csv-import-dialog'
@@ -55,6 +56,8 @@ const zoneColumns: ColumnConfig[] = [
 ]
 
 export default function ZonesPage() {
+  const { user } = useAuth()
+  const isAdmin = user?.role?.toUpperCase() === 'ADMIN'
   const [zones, setZones] = useState<Zone[]>(() => getZones())
   const [open, setOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -130,6 +133,10 @@ export default function ZonesPage() {
     return importedCount
   }
 
+  const visibleZoneColumns = isAdmin
+    ? zoneColumns
+    : zoneColumns.filter((column) => column.key !== 'actions')
+
   return (
     <div className='space-y-4'>
       <div className='flex items-center justify-between'>
@@ -137,16 +144,18 @@ export default function ZonesPage() {
           <h2 className='text-2xl font-bold tracking-tight'>Zones Management</h2>
           <p className='text-muted-foreground'>Manage access zones and their properties</p>
         </div>
-        <div className='flex gap-2'>
-          <Button onClick={() => setImportOpen(true)} variant='outline' className='gap-2'>
-            <IconUpload size={16} />
-            Import
-          </Button>
-          <Button onClick={handleAddZone} className='gap-2'>
-            <IconPlus size={16} />
-            Create Zone
-          </Button>
-        </div>
+        {isAdmin && (
+          <div className='flex gap-2'>
+            <Button onClick={() => setImportOpen(true)} variant='outline' className='gap-2'>
+              <IconUpload size={16} />
+              Import
+            </Button>
+            <Button onClick={handleAddZone} className='gap-2'>
+              <IconPlus size={16} />
+              Create Zone
+            </Button>
+          </div>
+        )}
       </div>
 
       <Card>
@@ -162,7 +171,7 @@ export default function ZonesPage() {
           ) : (
           <TableDataWrapper
             data={zones}
-            columns={zoneColumns}
+            columns={visibleZoneColumns}
             itemsPerPage={10}
             searchableFields={['name', 'description', 'manager']}
           >
@@ -180,8 +189,12 @@ export default function ZonesPage() {
                     {data.map((zone) => (
                       <TableRow 
                         key={zone.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleAssignManager(zone)}
+                        className={isAdmin ? 'cursor-pointer hover:bg-muted/50' : undefined}
+                        onClick={() => {
+                          if (isAdmin) {
+                            handleAssignManager(zone)
+                          }
+                        }}
                       >
                         {visibleColumns.map(col => (
                           <TableCell key={`${zone.id}-${col.key}`}>
@@ -237,42 +250,44 @@ export default function ZonesPage() {
             )}
           </TableDataWrapper>
           )}
-          <AddZoneDialog open={open} onOpenChange={(s) => { if (!s) setCurrent(null); setOpen(s) }} current={current} />
-          <CSVImportDialog
-            open={importOpen}
-            onOpenChange={setImportOpen}
-            title='Import Zones'
-            description='Bulk import zones from a CSV file. Zones will be created with the provided information.'
-            fields={[
-              { key: 'name', label: 'Zone Name', required: true, type: 'string' },
-              { key: 'location', label: 'Location', required: false, type: 'string' },
-              { key: 'zoneType', label: 'Zone Type', required: false, type: 'string' },
-              { key: 'level', label: 'Security Level', required: false, type: 'number' },
-              { key: 'manager', label: 'Manager', required: false, type: 'string' },
-            ]}
-            exampleData={[
-              {
-                name: 'Main Entrance',
-                location: 'Building A - Floor 1',
-                zoneType: 'Green',
-                level: '2',
-                manager: 'John Smith'
-              },
-              {
-                name: 'Server Room',
-                location: 'Building B - Basement',
-                zoneType: 'Red',
-                level: '4',
-                manager: 'Jane Doe'
-              }
-            ]}
-            onImport={handleImportZones}
-            templateFileName='zones-template.csv'
-          />
+          <AddZoneDialog open={isAdmin && open} onOpenChange={(s) => { if (!s) setCurrent(null); setOpen(s) }} current={current} />
+          {isAdmin && (
+            <CSVImportDialog
+              open={importOpen}
+              onOpenChange={setImportOpen}
+              title='Import Zones'
+              description='Bulk import zones from a CSV file. Zones will be created with the provided information.'
+              fields={[
+                { key: 'name', label: 'Zone Name', required: true, type: 'string' },
+                { key: 'location', label: 'Location', required: false, type: 'string' },
+                { key: 'zoneType', label: 'Zone Type', required: false, type: 'string' },
+                { key: 'level', label: 'Security Level', required: false, type: 'number' },
+                { key: 'manager', label: 'Manager', required: false, type: 'string' },
+              ]}
+              exampleData={[
+                {
+                  name: 'Main Entrance',
+                  location: 'Building A - Floor 1',
+                  zoneType: 'Green',
+                  level: '2',
+                  manager: 'John Smith'
+                },
+                {
+                  name: 'Server Room',
+                  location: 'Building B - Basement',
+                  zoneType: 'Red',
+                  level: '4',
+                  manager: 'Jane Doe'
+                }
+              ]}
+              onImport={handleImportZones}
+              templateFileName='zones-template.csv'
+            />
+          )}
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog open={isAdmin && !!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete zone</AlertDialogTitle>
@@ -291,7 +306,7 @@ export default function ZonesPage() {
       </AlertDialog>
 
       <AssignZoneManagerDialog 
-        open={managerDialogOpen} 
+        open={isAdmin && managerDialogOpen} 
         onOpenChange={setManagerDialogOpen} 
         zone={selectedZone} 
       />

@@ -7,6 +7,7 @@ import { TableDataWrapper, ColumnConfig } from '@/components/custom/table-data-w
 import type { Door, Device, Zone } from '@/types/scas'
 import { DeviceType, type DeviceCreateDTO } from '@/types/device'
 import { subscribeDoors, getDoors, loadDoors, removeDoor, subscribeDevices, getDevices, loadDevices, removeDevice, addDoor, addDevice, subscribeZones, loadZones, getZones } from '@/services'
+import { useAuth } from '@/contexts/AuthContext'
 import AddDoorDialog from './components/add-door-dialog'
 import AddDeviceDialog from './components/add-device-dialog'
 import CSVImportDialog from '@/components/custom/csv-import-dialog'
@@ -30,6 +31,8 @@ const deviceColumns: ColumnConfig[] = [
 ]
 
 export default function DoorsDevicesPage() {
+  const { user } = useAuth()
+  const isAdmin = user?.role?.toUpperCase() === 'ADMIN'
   const [doors, setDoors] = useState<Door[]>(() => getDoors())
   const [devices, setDevices] = useState<Device[]>(() => getDevices())
   const [zones, setZones] = useState<Zone[]>(() => getZones())
@@ -147,6 +150,13 @@ export default function DoorsDevicesPage() {
     return importedCount
   }
 
+  const visibleDoorColumns = isAdmin
+    ? doorColumns
+    : doorColumns.filter((column) => column.key !== 'actions')
+  const visibleDeviceColumns = isAdmin
+    ? deviceColumns
+    : deviceColumns.filter((column) => column.key !== 'actions')
+
   return (
     <div className='space-y-4'>
       <div>
@@ -161,16 +171,18 @@ export default function DoorsDevicesPage() {
         </TabsList>
 
         <TabsContent value='doors' className='space-y-4'>
-          <div className='flex justify-end gap-2'>
-            <Button onClick={() => setImportDoorOpen(true)} variant='outline' className='gap-2'>
-              <IconUpload size={16} />
-              Import
-            </Button>
-            <Button onClick={handleAddDoor} className='gap-2'>
-              <IconPlus size={16} />
-              Add Door
-            </Button>
-          </div>
+          {isAdmin && (
+            <div className='flex justify-end gap-2'>
+              <Button onClick={() => setImportDoorOpen(true)} variant='outline' className='gap-2'>
+                <IconUpload size={16} />
+                Import
+              </Button>
+              <Button onClick={handleAddDoor} className='gap-2'>
+                <IconPlus size={16} />
+                Add Door
+              </Button>
+            </div>
+          )}
 
           <Card>
             <CardHeader>
@@ -179,7 +191,7 @@ export default function DoorsDevicesPage() {
             <CardContent>
               <TableDataWrapper
                 data={doors}
-                columns={doorColumns}
+                columns={visibleDoorColumns}
                 itemsPerPage={10}
                 searchableFields={['name', 'zoneName']}
               >
@@ -239,16 +251,18 @@ export default function DoorsDevicesPage() {
         </TabsContent>
 
         <TabsContent value='devices' className='space-y-4'>
-          <div className='flex justify-end gap-2'>
-            <Button onClick={() => setImportDeviceOpen(true)} variant='outline' className='gap-2'>
-              <IconUpload size={16} />
-              Import
-            </Button>
-            <Button onClick={handleAddDevice} className='gap-2'>
-              <IconPlus size={16} />
-              Add Device
-            </Button>
-          </div>
+          {isAdmin && (
+            <div className='flex justify-end gap-2'>
+              <Button onClick={() => setImportDeviceOpen(true)} variant='outline' className='gap-2'>
+                <IconUpload size={16} />
+                Import
+              </Button>
+              <Button onClick={handleAddDevice} className='gap-2'>
+                <IconPlus size={16} />
+                Add Device
+              </Button>
+            </div>
+          )}
 
           <Card>
             <CardHeader>
@@ -257,7 +271,7 @@ export default function DoorsDevicesPage() {
             <CardContent>
               <TableDataWrapper
                 data={devices}
-                columns={deviceColumns}
+                columns={visibleDeviceColumns}
                 itemsPerPage={10}
                 searchableFields={['name', 'type', 'zoneName']}
               >
@@ -319,7 +333,7 @@ export default function DoorsDevicesPage() {
         </TabsContent>
       </Tabs>
       <AddDoorDialog
-        open={openDoor}
+        open={isAdmin && openDoor}
         onOpenChange={(s) => { if (!s) setCurrentDoor(null); setOpenDoor(s) }}
         current={currentDoor}
         zones={zones}
@@ -327,70 +341,74 @@ export default function DoorsDevicesPage() {
         onSuccess={refreshDoorsAndDevices}
       />
       <AddDeviceDialog
-        open={openDevice}
+        open={isAdmin && openDevice}
         onOpenChange={(s) => { if (!s) setCurrentDevice(null); setOpenDevice(s) }}
         current={currentDevice}
         zones={zones}
         onSuccess={refreshDoorsAndDevices}
       />
 
-      <CSVImportDialog
-        open={importDoorOpen}
-        onOpenChange={setImportDoorOpen}
-        title='Import Doors'
-        description='Bulk import doors from a CSV file. Doors will be created with the provided information.'
-        fields={[
-          { key: 'name', label: 'Door Name', required: true, type: 'string' },
-          { key: 'zoneId', label: 'Zone ID', required: true, type: 'string' },
-          { key: 'location', label: 'Location', required: false, type: 'string' },
-        ]}
-        exampleData={[
-          {
-            name: 'Main Entrance',
-            zoneId: 'zone1',
-            location: 'Reception'
-          },
-          {
-            name: 'Server Room Door',
-            zoneId: 'zone2',
-            location: 'Server Room'
-          }
-        ]}
-        onImport={handleImportDoors}
-        templateFileName='doors-template.csv'
-      />
-      
-      <CSVImportDialog
-        open={importDeviceOpen}
-        onOpenChange={setImportDeviceOpen}
-        title='Import Devices'
-        description='Bulk import devices from a CSV file. Devices will be created in a selected zone with a defined relay capacity.'
-        fields={[
-          { key: 'name', label: 'Device Name', required: true, type: 'string' },
-          { key: 'type', label: 'Device Type', required: false, type: 'enum', options: ['reader', 'controller', 'lock'] },
-          { key: 'zoneId', label: 'Zone ID', required: true, type: 'string' },
-          { key: 'relayCount', label: 'Relay Count', required: true, type: 'number' },
-          { key: 'status', label: 'Status', required: false, type: 'enum', options: ['online', 'offline'] },
-        ]}
-        exampleData={[
-          {
-            name: 'Main Entrance Reader',
-            type: 'reader',
-            zoneId: '1',
-            relayCount: 4,
-            status: 'online'
-          },
-          {
-            name: 'Server Room Lock',
-            type: 'lock',
-            zoneId: '2',
-            relayCount: 2,
-            status: 'online'
-          }
-        ]}
-        onImport={handleImportDevices}
-        templateFileName='devices-template.csv'
-      />
+      {isAdmin && (
+        <>
+          <CSVImportDialog
+            open={importDoorOpen}
+            onOpenChange={setImportDoorOpen}
+            title='Import Doors'
+            description='Bulk import doors from a CSV file. Doors will be created with the provided information.'
+            fields={[
+              { key: 'name', label: 'Door Name', required: true, type: 'string' },
+              { key: 'zoneId', label: 'Zone ID', required: true, type: 'string' },
+              { key: 'location', label: 'Location', required: false, type: 'string' },
+            ]}
+            exampleData={[
+              {
+                name: 'Main Entrance',
+                zoneId: 'zone1',
+                location: 'Reception'
+              },
+              {
+                name: 'Server Room Door',
+                zoneId: 'zone2',
+                location: 'Server Room'
+              }
+            ]}
+            onImport={handleImportDoors}
+            templateFileName='doors-template.csv'
+          />
+
+          <CSVImportDialog
+            open={importDeviceOpen}
+            onOpenChange={setImportDeviceOpen}
+            title='Import Devices'
+            description='Bulk import devices from a CSV file. Devices will be created in a selected zone with a defined relay capacity.'
+            fields={[
+              { key: 'name', label: 'Device Name', required: true, type: 'string' },
+              { key: 'type', label: 'Device Type', required: false, type: 'enum', options: ['reader', 'controller', 'lock'] },
+              { key: 'zoneId', label: 'Zone ID', required: true, type: 'string' },
+              { key: 'relayCount', label: 'Relay Count', required: true, type: 'number' },
+              { key: 'status', label: 'Status', required: false, type: 'enum', options: ['online', 'offline'] },
+            ]}
+            exampleData={[
+              {
+                name: 'Main Entrance Reader',
+                zoneId: '1',
+                type: 'reader',
+                relayCount: 4,
+                status: 'online'
+              },
+              {
+                name: 'Server Room Lock',
+                zoneId: '2',
+                type: 'lock',
+                relayCount: 2,
+                status: 'online'
+              }
+            ]}
+            onImport={handleImportDevices}
+            templateFileName='devices-template.csv'
+          />
+        </>
+      )}
     </div>
   )
 }

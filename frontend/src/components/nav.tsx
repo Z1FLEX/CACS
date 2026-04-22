@@ -23,7 +23,7 @@ import {
 import { cn } from '@/lib/utils'
 import useCheckActiveNav from '@/hooks/use-check-active-nav'
 import { SideLink } from '@/data/sidelinks'
-import { useRole } from '@/contexts/RoleContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface NavProps extends React.HTMLAttributes<HTMLDivElement> {
   isCollapsed: boolean
@@ -37,11 +37,13 @@ export default function Nav({
   className,
   closeNav,
 }: NavProps) {
-  const { role } = useRole()
+  const { user } = useAuth()
+  const role = user?.role
 
   // Filter links based on role
   const filteredLinks = links.filter((link) => {
     if (!link.roleRestriction) return true
+    if (!role) return false
     const allowed = Array.isArray(link.roleRestriction) ? link.roleRestriction : [link.roleRestriction]
     return allowed.includes(role)
   })

@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,8 +28,19 @@ public class AccessCardService {
 
     @Transactional(readOnly = true)
     public List<AccessCardDTO> findAll() {
-        return accessCardRepository.findByDeletedAtIsNull().stream()
-                .map(dtoMapper::toAccessCardDTO)
+        List<AccessCard> cards = accessCardRepository.findByDeletedAtIsNull();
+        Map<Integer, User> usersByCardId = cards.isEmpty()
+            ? Collections.emptyMap()
+            : userRepository.findByAccessCard_IdInAndDeletedAtIsNull(
+                cards.stream()
+                    .map(AccessCard::getId)
+                    .toList()
+            ).stream()
+            .filter(user -> user.getAccessCard() != null && user.getAccessCard().getId() != null)
+            .collect(Collectors.toMap(user -> user.getAccessCard().getId(), user -> user));
+
+        return cards.stream()
+                .map(card -> dtoMapper.toAccessCardDTO(card, usersByCardId.get(card.getId())))
                 .collect(Collectors.toList());
     }
 

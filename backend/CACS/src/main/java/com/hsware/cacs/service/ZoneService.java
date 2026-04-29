@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Objects;
 
@@ -33,14 +35,18 @@ public class ZoneService {
 
     @Transactional(readOnly = true)
     public List<ZoneDTO> findAll() {
-        return zoneRepository.findByDeletedAtIsNull().stream()
-                .map(dtoMapper::toZoneDTO)
+        List<Zone> zones = zoneRepository.findByDeletedAtIsNull();
+        Map<Integer, String> managerDisplayByZoneId = loadManagerDisplayByZoneId(zones);
+
+        return zones.stream()
+                .map(zone -> dtoMapper.toZoneDTO(zone, managerDisplayByZoneId.get(zone.getId())))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public Optional<ZoneDTO> findById(Integer id) {
-        return zoneRepository.findByIdAndDeletedAtIsNull(id).map(dtoMapper::toZoneDTO);
+        return zoneRepository.findByIdAndDeletedAtIsNull(id)
+            .map(zone -> dtoMapper.toZoneDTO(zone, loadManagerDisplayByZoneId(List.of(zone)).get(zone.getId())));
     }
 
     @Transactional
@@ -84,6 +90,28 @@ public class ZoneService {
                 userRepository.save(newManager);
             });
         }
+    }
+
+    private Map<Integer, String> loadManagerDisplayByZoneId(List<Zone> zones) {
+        Set<Integer> zoneIds = zones.stream()
+            .map(Zone::getId)
+            .filter(id -> id != null)
+            .collect(Collectors.toSet());
+        if (zoneIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return userRepository.findManagersByResponsibleZoneIds(zoneIds).stream()
+            .flatMap(user -> user.getResponsibleZones().stream()
+                .filter(zone -> zone.getId() != null && zoneIds.contains(zone.getId()))
+                .map(zone -> Map.entry(zone.getId(), displayName(user))))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (first, ignored) -> first));
+    }
+
+    private String displayName(User user) {
+        String name = ((user.getFirstName() != null ? user.getFirstName() : "") + " "
+            + (user.getLastName() != null ? user.getLastName() : "")).trim();
+        return name.isEmpty() ? user.getEmail() : name;
     }
 
     @Transactional

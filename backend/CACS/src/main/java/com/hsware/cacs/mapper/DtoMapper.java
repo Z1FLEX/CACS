@@ -185,25 +185,22 @@ public class DtoMapper {
         return new LinkedHashSet<>(resolvedRoles);
     }
     public AccessCardDTO toAccessCardDTO(AccessCard accessCard) {
+        return toAccessCardDTO(accessCard, null);
+    }
+
+    public AccessCardDTO toAccessCardDTO(AccessCard accessCard, User assignedUser) {
         if (accessCard == null) return null;
         
-        // Find user associated with this access card
         Integer userId = null;
         String userName = "Unassigned";
-        if (accessCard.getId() != null) {
-            var userOpt = userRepository.findByAccessCard_IdAndDeletedAtIsNull(accessCard.getId());
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
-                userId = user.getId();
-                String name = (nullToEmpty(user.getFirstName()) + " " + nullToEmpty(user.getLastName())).trim();
-                if (name.isEmpty()) {
-                    name = nullToEmpty(user.getEmail());
-                }
-                if (name.isEmpty()) {
-                    name = "Unassigned";
-                }
-                userName = name;
-            }
+        User user = assignedUser;
+        if (user == null && accessCard.getId() != null) {
+            user = userRepository.findByAccessCard_IdAndDeletedAtIsNull(accessCard.getId()).orElse(null);
+        }
+        if (user != null) {
+            userId = user.getId();
+            String name = userDisplayName(user);
+            userName = name.isEmpty() ? "Unassigned" : name;
         }
         
         return new AccessCardDTO(
@@ -331,6 +328,10 @@ public class DtoMapper {
     }
 
     public ZoneDTO toZoneDTO(Zone zone) {
+        return toZoneDTO(zone, null);
+    }
+
+    public ZoneDTO toZoneDTO(Zone zone, String managerDisplay) {
         if (zone == null) return null;
 
         Map<String, Object> zoneTypeMap = null;
@@ -342,10 +343,11 @@ public class DtoMapper {
                     "level", t.getSecurityLevel() != null ? t.getSecurityLevel() : 0);
         }
 
-        String managerDisplay = null;
-        List<User> managers = userRepository.findByResponsibleZones_IdAndDeletedAtIsNull(zone.getId());
-        if (!managers.isEmpty()) {
-            managerDisplay = userDisplayName(managers.get(0));
+        if (managerDisplay == null) {
+            List<User> managers = userRepository.findByResponsibleZones_IdAndDeletedAtIsNull(zone.getId());
+            if (!managers.isEmpty()) {
+                managerDisplay = userDisplayName(managers.get(0));
+            }
         }
 
         return new ZoneDTO(

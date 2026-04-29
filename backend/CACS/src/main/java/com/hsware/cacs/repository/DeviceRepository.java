@@ -9,10 +9,13 @@ import java.util.Optional;
 
 public interface DeviceRepository extends JpaRepository<Device, Integer> {
 
+    @EntityGraph(attributePaths = {"zone"})
     List<Device> findByDeletedAtIsNull();
 
+    @EntityGraph(attributePaths = {"zone"})
     Optional<Device> findByIdAndDeletedAtIsNull(Integer id);
 
+    @EntityGraph(attributePaths = {"zone"})
     List<Device> findByZone_IdAndDeletedAtIsNull(Integer zoneId);
 
     boolean existsByZone_IdAndDeletedAtIsNull(Integer zoneId);

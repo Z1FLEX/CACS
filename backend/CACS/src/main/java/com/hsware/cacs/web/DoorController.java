@@ -4,6 +4,7 @@ import com.hsware.cacs.dto.DoorDTO;
 import com.hsware.cacs.dto.DoorCreateDTO;
 import com.hsware.cacs.dto.DoorUpdateDTO;
 import com.hsware.cacs.service.DoorService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,14 +37,14 @@ public class DoorController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<DoorDTO> create(@RequestBody DoorCreateDTO body) {
+    public ResponseEntity<DoorDTO> create(@Valid @RequestBody DoorCreateDTO body) {
         DoorDTO created = doorService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<DoorDTO> update(@PathVariable Integer id, @RequestBody DoorUpdateDTO body) {
+    public ResponseEntity<DoorDTO> update(@PathVariable Integer id, @Valid @RequestBody DoorUpdateDTO body) {
         return doorService.update(id, body)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

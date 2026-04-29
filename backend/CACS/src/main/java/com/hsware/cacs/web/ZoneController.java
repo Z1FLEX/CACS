@@ -4,6 +4,7 @@ import com.hsware.cacs.dto.ZoneDTO;
 import com.hsware.cacs.dto.ZoneCreateDTO;
 import com.hsware.cacs.dto.ZoneUpdateDTO;
 import com.hsware.cacs.service.ZoneService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,14 +37,14 @@ public class ZoneController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ZoneDTO> create(@RequestBody ZoneCreateDTO body) {
+    public ResponseEntity<ZoneDTO> create(@Valid @RequestBody ZoneCreateDTO body) {
         ZoneDTO created = zoneService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ZoneDTO> update(@PathVariable Integer id, @RequestBody ZoneUpdateDTO body) {
+    public ResponseEntity<ZoneDTO> update(@PathVariable Integer id, @Valid @RequestBody ZoneUpdateDTO body) {
         return zoneService.update(id, body)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

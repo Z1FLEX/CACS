@@ -4,6 +4,7 @@ import com.hsware.cacs.dto.ScheduleDTO;
 import com.hsware.cacs.dto.ScheduleCreateDTO;
 import com.hsware.cacs.dto.ScheduleUpdateDTO;
 import com.hsware.cacs.service.ScheduleService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,13 +33,13 @@ public class ScheduleController {
     }
 
     @PostMapping
-    public ResponseEntity<ScheduleDTO> create(@RequestBody ScheduleCreateDTO body) {
+    public ResponseEntity<ScheduleDTO> create(@Valid @RequestBody ScheduleCreateDTO body) {
         ScheduleDTO created = scheduleService.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ScheduleDTO> update(@PathVariable Integer id, @RequestBody ScheduleUpdateDTO body) {
+    public ResponseEntity<ScheduleDTO> update(@PathVariable Integer id, @Valid @RequestBody ScheduleUpdateDTO body) {
         return scheduleService.update(id, body)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

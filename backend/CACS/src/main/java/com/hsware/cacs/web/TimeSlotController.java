@@ -4,6 +4,7 @@ import com.hsware.cacs.dto.TimeSlotDTO;
 import com.hsware.cacs.dto.TimeSlotCreateDTO;
 import com.hsware.cacs.dto.TimeSlotUpdateDTO;
 import com.hsware.cacs.service.ScheduleService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +26,7 @@ public class TimeSlotController {
     }
 
     @PostMapping
-    public ResponseEntity<TimeSlotDTO> createTimeSlot(@PathVariable Integer scheduleId, @RequestBody TimeSlotCreateDTO body) {
+    public ResponseEntity<TimeSlotDTO> createTimeSlot(@PathVariable Integer scheduleId, @Valid @RequestBody TimeSlotCreateDTO body) {
         TimeSlotDTO created = scheduleService.createTimeSlot(scheduleId, body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -40,7 +41,7 @@ class TimeSlotManagementController {
     private final ScheduleService scheduleService;
 
     @PutMapping("/{id}")
-    public ResponseEntity<TimeSlotDTO> updateTimeSlot(@PathVariable Integer id, @RequestBody TimeSlotUpdateDTO body) {
+    public ResponseEntity<TimeSlotDTO> updateTimeSlot(@PathVariable Integer id, @Valid @RequestBody TimeSlotUpdateDTO body) {
         return scheduleService.updateTimeSlot(id, body)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

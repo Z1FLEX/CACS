@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { login, logout as apiLogout } from '@/api/auth'
+import { login, logout as apiLogout, refreshToken } from '@/api/auth'
 import { resolveEffectiveRole, type AppRole } from '@/lib/rbac'
 
 interface User {
@@ -75,40 +75,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [pendingUser, setPendingUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Check for existing tokens on mount and validate them
   useEffect(() => {
     const initializeAuth = async () => {
-      const accessToken = localStorage.getItem('accessToken')
-      const savedUser = localStorage.getItem('user')
-      const tokenRoles = extractRolesFromToken(accessToken)
-
-      if (accessToken && savedUser) {
-        try {
-          // Validate token by making a simple API call
-          // If the token is invalid, the interceptor will handle refresh or logout
-          setUser(normalizeUser(JSON.parse(savedUser), tokenRoles))
-        } catch (error) {
-          console.error('Token validation failed:', error)
-          // Clear invalid tokens
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-          localStorage.removeItem('user')
-        }
+      try {
+        const response = await refreshToken()
+        const tokenRoles = extractRolesFromToken(response.accessToken)
+        setUser(normalizeUser(response.user, tokenRoles))
+      } catch {
+        setUser(null)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     initializeAuth()
   }, [])
-
-  // Save user to localStorage when it changes
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('user', JSON.stringify(user))
-    } else {
-      localStorage.removeItem('user')
-    }
-  }, [user])
 
   const handleLogin = async (email: string, password: string) => {
     setIsLoading(true)
@@ -121,11 +102,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Login response is missing a valid user role')
       }
       
-      // Store tokens
-      localStorage.setItem('accessToken', response.accessToken)
-      localStorage.setItem('refreshToken', response.refreshToken)
-      
-      // Set user
       setUser(normalizedUser)
       
       // Set pending user for OTP if needed
@@ -147,10 +123,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout API call failed:', error)
       // Continue with local logout even if API call fails
     } finally {
-      // Clear local storage and state
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
-      localStorage.removeItem('user')
       setUser(null)
       setPendingUser(null)
       setIsLoading(false)

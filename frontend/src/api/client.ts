@@ -3,6 +3,7 @@
  * Set VITE_API_BASE_URL in .env to point to your backend host (e.g. http://localhost:8080).
  */
 import axios from 'axios'
+import { clearAccessToken, getAccessToken, setAccessToken } from '@/api/auth-session'
 
 const baseURL = (
   typeof import.meta.env.VITE_API_BASE_URL === 'string' && import.meta.env.VITE_API_BASE_URL.trim() !== ''
@@ -13,6 +14,7 @@ export const api = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
+  withCredentials: true,
 })
 
 let refreshPromise: Promise<string | null> | null = null
@@ -42,18 +44,15 @@ function isTokenExpiringSoon(token: string, bufferSeconds = 30): boolean {
 async function refreshAccessToken(): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
-      const refreshToken = localStorage.getItem('refreshToken')
-      if (!refreshToken) return null
-
       const response = await axios.post(
         `${baseURL}/api/auth/refresh`,
-        { refreshToken },
-        { headers: { 'Content-Type': 'application/json' } }
+        {},
+        { headers: { 'Content-Type': 'application/json' }, withCredentials: true }
       )
 
       const { accessToken } = response.data
       if (accessToken) {
-        localStorage.setItem('accessToken', accessToken)
+        setAccessToken(accessToken)
         return accessToken
       }
 
@@ -67,9 +66,7 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 function clearAuthAndRedirect() {
-  localStorage.removeItem('accessToken')
-  localStorage.removeItem('refreshToken')
-  localStorage.removeItem('user')
+  clearAccessToken()
   window.location.href = '/sign-in'
 }
 
@@ -79,7 +76,7 @@ api.interceptors.request.use(async (config) => {
     return config
   }
 
-  let token = localStorage.getItem('accessToken')
+  let token = getAccessToken()
   if (token && isTokenExpiringSoon(token)) {
     try {
       token = await refreshAccessToken()

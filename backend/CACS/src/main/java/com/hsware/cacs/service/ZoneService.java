@@ -6,6 +6,9 @@ import com.hsware.cacs.dto.ZoneUpdateDTO;
 import com.hsware.cacs.entity.User;
 import com.hsware.cacs.entity.Zone;
 import com.hsware.cacs.mapper.DtoMapper;
+import com.hsware.cacs.repository.DeviceRepository;
+import com.hsware.cacs.repository.DoorRepository;
+import com.hsware.cacs.repository.ProfileRepository;
 import com.hsware.cacs.repository.UserRepository;
 import com.hsware.cacs.repository.ZoneRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,9 @@ public class ZoneService {
 
     private final ZoneRepository zoneRepository;
     private final UserRepository userRepository;
+    private final DoorRepository doorRepository;
+    private final DeviceRepository deviceRepository;
+    private final ProfileRepository profileRepository;
     private final DtoMapper dtoMapper;
 
     @Transactional(readOnly = true)
@@ -84,6 +90,15 @@ public class ZoneService {
     public boolean delete(Integer id) {
         Optional<Zone> existing = zoneRepository.findByIdAndDeletedAtIsNull(id);
         if (existing.isEmpty()) return false;
+        if (doorRepository.existsByZone_IdAndDeletedAtIsNull(id)) {
+            throw new IllegalArgumentException("Cannot delete a zone that is still assigned to doors");
+        }
+        if (deviceRepository.existsByZone_IdAndDeletedAtIsNull(id)) {
+            throw new IllegalArgumentException("Cannot delete a zone that is still assigned to devices");
+        }
+        if (profileRepository.countByZones_IdAndDeletedAtIsNull(id) > 0) {
+            throw new IllegalArgumentException("Cannot delete a zone that is still assigned to profiles");
+        }
         Zone z = existing.get();
         z.setDeletedAt(java.time.Instant.now());
         zoneRepository.save(z);

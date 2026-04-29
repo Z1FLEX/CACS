@@ -85,7 +85,11 @@ public class DtoMapper {
         user.setRoles(resolveRoles(dto.getRoles(), true));
         
         if (dto.getCardId() != null) {
-            accessCardRepository.findById(dto.getCardId()).ifPresent(user::setAccessCard);
+            accessCardRepository.findByIdAndDeletedAtIsNull(dto.getCardId())
+                .ifPresentOrElse(
+                    user::setAccessCard,
+                    () -> { throw new IllegalArgumentException("Assigned card not found"); }
+                );
         }
         user.setProfiles(resolveProfiles(dto.getProfileIds(), false));
         
@@ -107,7 +111,11 @@ public class DtoMapper {
             if (dto.getCardId() == 0) {
                 user.setAccessCard(null);
             } else {
-                accessCardRepository.findById(dto.getCardId()).ifPresent(user::setAccessCard);
+                accessCardRepository.findByIdAndDeletedAtIsNull(dto.getCardId())
+                    .ifPresentOrElse(
+                        user::setAccessCard,
+                        () -> { throw new IllegalArgumentException("Assigned card not found"); }
+                    );
             }
         }
         if (dto.getProfileIds() != null) {
@@ -260,19 +268,11 @@ public class DtoMapper {
         profile.setName(dto.getName());
 
         if (dto.getScheduleIds() != null) {
-            Set<Schedule> schedules = dto.getScheduleIds().stream()
-                .map(scheduleId -> scheduleRepository.findById(scheduleId).orElse(null))
-                .filter(schedule -> schedule != null)
-                .collect(Collectors.toSet());
-            profile.setSchedules(schedules);
+            profile.setSchedules(resolveSchedules(dto.getScheduleIds()));
         }
         
         if (dto.getZoneIds() != null) {
-            Set<Zone> zones = dto.getZoneIds().stream()
-                .map(zoneId -> zoneRepository.findById(zoneId).orElse(null))
-                .filter(zone -> zone != null)
-                .collect(Collectors.toSet());
-            profile.setZones(zones);
+            profile.setZones(resolveZones(dto.getZoneIds()));
         }
         
         return profile;
@@ -283,19 +283,51 @@ public class DtoMapper {
         
         if (dto.getName() != null) profile.setName(dto.getName());
         if (dto.getScheduleIds() != null) {
-            Set<Schedule> schedules = dto.getScheduleIds().stream()
-                .map(scheduleId -> scheduleRepository.findById(scheduleId).orElse(null))
-                .filter(schedule -> schedule != null)
-                .collect(Collectors.toSet());
-            profile.setSchedules(schedules);
+            profile.setSchedules(resolveSchedules(dto.getScheduleIds()));
         }
         if (dto.getZoneIds() != null) {
-            Set<Zone> zones = dto.getZoneIds().stream()
-                .map(zoneId -> zoneRepository.findById(zoneId).orElse(null))
-                .filter(zone -> zone != null)
-                .collect(Collectors.toSet());
-            profile.setZones(zones);
+            profile.setZones(resolveZones(dto.getZoneIds()));
         }
+    }
+
+    private Set<Schedule> resolveSchedules(Set<Integer> scheduleIds) {
+        if (scheduleIds == null || scheduleIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+
+        List<Schedule> resolvedSchedules = scheduleRepository.findAllById(scheduleIds).stream()
+            .filter(schedule -> schedule.getDeletedAt() == null)
+            .toList();
+        Set<Integer> resolvedIds = resolvedSchedules.stream().map(Schedule::getId).collect(Collectors.toSet());
+
+        Set<Integer> missingScheduleIds = scheduleIds.stream()
+            .filter(scheduleId -> !resolvedIds.contains(scheduleId))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (!missingScheduleIds.isEmpty()) {
+            throw new IllegalArgumentException("Unknown schedules: " + missingScheduleIds);
+        }
+
+        return new LinkedHashSet<>(resolvedSchedules);
+    }
+
+    private Set<Zone> resolveZones(Set<Integer> zoneIds) {
+        if (zoneIds == null || zoneIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+
+        List<Zone> resolvedZones = zoneRepository.findAllById(zoneIds).stream()
+            .filter(zone -> zone.getDeletedAt() == null)
+            .toList();
+        Set<Integer> resolvedIds = resolvedZones.stream().map(Zone::getId).collect(Collectors.toSet());
+
+        Set<Integer> missingZoneIds = zoneIds.stream()
+            .filter(zoneId -> !resolvedIds.contains(zoneId))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (!missingZoneIds.isEmpty()) {
+            throw new IllegalArgumentException("Unknown zones: " + missingZoneIds);
+        }
+
+        return new LinkedHashSet<>(resolvedZones);
     }
 
     public ZoneDTO toZoneDTO(Zone zone) {
@@ -355,7 +387,11 @@ public class DtoMapper {
             if (dto.getZoneTypeId() == 0) {
                 zone.setZoneType(null);
             } else {
-                zoneTypeRepository.findById(dto.getZoneTypeId()).ifPresent(zone::setZoneType);
+                zoneTypeRepository.findById(dto.getZoneTypeId())
+                    .ifPresentOrElse(
+                        zone::setZoneType,
+                        () -> { throw new IllegalArgumentException("Invalid zone type ID"); }
+                    );
             }
         }
     }
@@ -402,7 +438,11 @@ public class DtoMapper {
         device.setIp(dto.getIp());
         device.setPort(dto.getPort());
         device.setRelayCount(dto.getRelayCount());
-        zoneRepository.findById(dto.getZoneId()).ifPresent(device::setZone);
+        zoneRepository.findByIdAndDeletedAtIsNull(dto.getZoneId())
+            .ifPresentOrElse(
+                device::setZone,
+                () -> { throw new IllegalArgumentException("Selected zone does not exist"); }
+            );
 
         return device;
     }
@@ -418,7 +458,11 @@ public class DtoMapper {
         Optional.ofNullable(dto.getPort()).ifPresent(device::setPort);
         Optional.ofNullable(dto.getRelayCount()).ifPresent(device::setRelayCount);
         if (dto.getZoneId() != null) {
-            zoneRepository.findById(dto.getZoneId()).ifPresent(device::setZone);
+            zoneRepository.findByIdAndDeletedAtIsNull(dto.getZoneId())
+                .ifPresentOrElse(
+                    device::setZone,
+                    () -> { throw new IllegalArgumentException("Selected zone does not exist"); }
+                );
         }
     }
 
@@ -447,10 +491,18 @@ public class DtoMapper {
         door.setLocation(dto.getLocation());
         
         if (dto.getZoneId() != null) {
-            zoneRepository.findById(dto.getZoneId()).ifPresent(door::setZone);
+            zoneRepository.findByIdAndDeletedAtIsNull(dto.getZoneId())
+                .ifPresentOrElse(
+                    door::setZone,
+                    () -> { throw new IllegalArgumentException("Selected zone does not exist"); }
+                );
         }
         if (dto.getDeviceId() != null && dto.getDeviceId() != 0) {
-            deviceRepository.findById(dto.getDeviceId()).ifPresent(door::setDevice);
+            deviceRepository.findByIdAndDeletedAtIsNull(dto.getDeviceId())
+                .ifPresentOrElse(
+                    door::setDevice,
+                    () -> { throw new IllegalArgumentException("Selected device does not exist"); }
+                );
         }
         door.setRelayIndex(dto.getRelayIndex());
         
@@ -464,14 +516,22 @@ public class DtoMapper {
         if (dto.getLocation() != null) door.setLocation(dto.getLocation());
         
         if (dto.getZoneId() != null) {
-            zoneRepository.findById(dto.getZoneId()).ifPresent(door::setZone);
+            zoneRepository.findByIdAndDeletedAtIsNull(dto.getZoneId())
+                .ifPresentOrElse(
+                    door::setZone,
+                    () -> { throw new IllegalArgumentException("Selected zone does not exist"); }
+                );
         }
         if (dto.getDeviceId() != null) {
             if (dto.getDeviceId() == 0) {
                 door.setDevice(null);
                 door.setRelayIndex(null);
             } else {
-                deviceRepository.findById(dto.getDeviceId()).ifPresent(door::setDevice);
+                deviceRepository.findByIdAndDeletedAtIsNull(dto.getDeviceId())
+                    .ifPresentOrElse(
+                        door::setDevice,
+                        () -> { throw new IllegalArgumentException("Selected device does not exist"); }
+                    );
                 door.setRelayIndex(dto.getRelayIndex());
             }
         } else if (dto.getRelayIndex() != null) {

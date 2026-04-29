@@ -46,7 +46,7 @@ class DoorServiceTest {
         Door door = Door.builder().name("Main Door").zone(doorZone).device(device).relayIndex(1).build();
 
         when(dtoMapper.toDoor(new DoorCreateDTO("Main Door", 1, null, 7, 1))).thenReturn(door);
-        when(zoneRepository.existsById(1)).thenReturn(true);
+        when(zoneRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(doorZone));
         when(deviceRepository.findByIdAndDeletedAtIsNull(7)).thenReturn(Optional.of(device));
 
         assertThatThrownBy(() -> doorService.create(new DoorCreateDTO("Main Door", 1, null, 7, 1)))
@@ -61,7 +61,7 @@ class DoorServiceTest {
         Door existingDoor = Door.builder().id(99).name("Server").zone(zone).build();
 
         when(doorRepository.findByIdAndDeletedAtIsNull(99)).thenReturn(Optional.of(existingDoor));
-        when(zoneRepository.existsById(1)).thenReturn(true);
+        when(zoneRepository.findByIdAndDeletedAtIsNull(1)).thenReturn(Optional.of(zone));
         when(deviceRepository.findByIdAndDeletedAtIsNull(7)).thenReturn(Optional.of(device));
         when(doorRepository.existsByDevice_IdAndRelayIndexAndDeletedAtIsNullAndIdNot(7, 2, 99)).thenReturn(true);
 

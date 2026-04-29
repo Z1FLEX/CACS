@@ -46,6 +46,7 @@ public class DeviceService {
 
     @Transactional
 public DeviceDTO create(DeviceCreateDTO dto) {
+    ensureSerialNumberAvailable(dto.getSerialNumber(), null);
     Device device = dtoMapper.toDevice(dto);
     return toDeviceDTOWithAvailability(deviceRepository.save(device));
 }
@@ -54,6 +55,19 @@ public DeviceDTO create(DeviceCreateDTO dto) {
 public DeviceDTO update(Integer id, DeviceUpdateDTO dto) {
     Device device = deviceRepository.findByIdAndDeletedAtIsNull(id)
             .orElseThrow(() -> new EntityNotFoundException("Device not found: " + id));
+    if (dto.getSerialNumber() != null) {
+        ensureSerialNumberAvailable(dto.getSerialNumber(), id);
+    }
+    if (dto.getRelayCount() != null && dto.getRelayCount() < device.getRelayCount()) {
+        int highestAssignedRelay = doorRepository.findByDevice_IdAndDeletedAtIsNull(id).stream()
+            .map(door -> door.getRelayIndex())
+            .filter(relayIndex -> relayIndex != null)
+            .max(Integer::compareTo)
+            .orElse(0);
+        if (highestAssignedRelay > dto.getRelayCount()) {
+            throw new IllegalArgumentException("Relay count cannot be lower than an assigned door relay");
+        }
+    }
     dtoMapper.updateDeviceFromDTO(dto, device);
     return toDeviceDTOWithAvailability(deviceRepository.save(device));
 }
@@ -62,6 +76,9 @@ public DeviceDTO update(Integer id, DeviceUpdateDTO dto) {
     public boolean delete(Integer id) {
         Optional<Device> existing = deviceRepository.findByIdAndDeletedAtIsNull(id);
         if (existing.isEmpty()) return false;
+        if (!doorRepository.findByDevice_IdAndDeletedAtIsNull(id).isEmpty()) {
+            throw new IllegalArgumentException("Cannot delete a device that is still assigned to doors");
+        }
         Device d = existing.get();
         d.setDeletedAt(java.time.Instant.now());
         deviceRepository.save(d);
@@ -91,6 +108,20 @@ public DeviceDTO update(Integer id, DeviceUpdateDTO dto) {
             }
         }
         return availableRelays;
+    }
+
+    private void ensureSerialNumberAvailable(String serialNumber, Integer currentDeviceId) {
+        if (serialNumber == null || serialNumber.isBlank()) {
+            return;
+        }
+
+        boolean exists = currentDeviceId == null
+            ? deviceRepository.existsBySerialNumberIgnoreCaseAndDeletedAtIsNull(serialNumber.trim())
+            : deviceRepository.existsBySerialNumberIgnoreCaseAndDeletedAtIsNullAndIdNot(serialNumber.trim(), currentDeviceId);
+
+        if (exists) {
+            throw new IllegalArgumentException("Device serial number already exists");
+        }
     }
 
 }

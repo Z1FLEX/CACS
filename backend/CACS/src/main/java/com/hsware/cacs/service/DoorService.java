@@ -73,7 +73,7 @@ public class DoorService {
         if (zone == null || zone.getId() == null) {
             throw new IllegalArgumentException("Door zone is required");
         }
-        if (!zoneRepository.existsById(zone.getId())) {
+        if (zoneRepository.findByIdAndDeletedAtIsNull(zone.getId()).isEmpty()) {
             throw new IllegalArgumentException("Selected zone does not exist");
         }
 

@@ -15,6 +15,12 @@ public interface DeviceRepository extends JpaRepository<Device, Integer> {
 
     List<Device> findByZone_IdAndDeletedAtIsNull(Integer zoneId);
 
+    boolean existsByZone_IdAndDeletedAtIsNull(Integer zoneId);
+
+    boolean existsBySerialNumberIgnoreCaseAndDeletedAtIsNull(String serialNumber);
+
+    boolean existsBySerialNumberIgnoreCaseAndDeletedAtIsNullAndIdNot(String serialNumber, Integer id);
+
     @EntityGraph(attributePaths = {"zone"})
     Optional<Device> findByIdAndDeletedAtIsNullAndStatus(Integer id, String status);
 

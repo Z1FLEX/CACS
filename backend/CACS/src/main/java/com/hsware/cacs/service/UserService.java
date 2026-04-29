@@ -39,6 +39,7 @@ public class UserService {
 
     @Transactional
     public UserDTO create(UserCreateDTO userCreateDTO) {
+        ensureEmailAvailable(userCreateDTO.getEmail(), null);
         User user = dtoMapper.toUser(userCreateDTO);
         synchronizeCardState(user, null, user.getAccessCard());
         user = userRepository.save(user);
@@ -50,6 +51,9 @@ public class UserService {
         Optional<User> existing = userRepository.findByIdAndDeletedAtIsNull(id);
         if (existing.isEmpty()) return Optional.empty();
         User user = existing.get();
+        if (userUpdateDTO.getEmail() != null) {
+            ensureEmailAvailable(userUpdateDTO.getEmail(), id);
+        }
         AccessCard previousCard = user.getAccessCard();
         dtoMapper.updateUserFromDTO(userUpdateDTO, user);
         synchronizeCardState(user, previousCard, user.getAccessCard());
@@ -118,6 +122,20 @@ public class UserService {
 
             managedCard.setStatus("ACTIVE");
             accessCardRepository.save(managedCard);
+        }
+    }
+
+    private void ensureEmailAvailable(String email, Integer currentUserId) {
+        if (email == null || email.isBlank()) {
+            return;
+        }
+
+        boolean exists = currentUserId == null
+            ? userRepository.existsByEmailIgnoreCaseAndDeletedAtIsNull(email.trim())
+            : userRepository.existsByEmailIgnoreCaseAndDeletedAtIsNullAndIdNot(email.trim(), currentUserId);
+
+        if (exists) {
+            throw new IllegalArgumentException("Email already exists");
         }
     }
 

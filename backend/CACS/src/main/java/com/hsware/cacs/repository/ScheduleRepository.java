@@ -11,4 +11,8 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
     List<Schedule> findByDeletedAtIsNull();
 
     Optional<Schedule> findByIdAndDeletedAtIsNull(Integer id);
+
+    boolean existsByNameIgnoreCaseAndDeletedAtIsNull(String name);
+
+    boolean existsByNameIgnoreCaseAndDeletedAtIsNullAndIdNot(String name, Integer id);
 }

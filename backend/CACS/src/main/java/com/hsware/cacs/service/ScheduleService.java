@@ -13,6 +13,7 @@ import com.hsware.cacs.mapper.DtoMapper;
 import com.hsware.cacs.repository.ScheduleRepository;
 import com.hsware.cacs.repository.ScheduleDayRepository;
 import com.hsware.cacs.repository.DayTimeSlotRepository;
+import com.hsware.cacs.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class ScheduleService {
     private final ScheduleRepository scheduleRepository;
     private final ScheduleDayRepository scheduleDayRepository;
     private final DayTimeSlotRepository dayTimeSlotRepository;
+    private final ProfileRepository profileRepository;
     private final DtoMapper dtoMapper;
 
     @Transactional(readOnly = true)
@@ -45,6 +47,7 @@ public class ScheduleService {
 
     @Transactional
     public ScheduleDTO create(ScheduleCreateDTO scheduleCreateDTO) {
+        ensureScheduleNameAvailable(scheduleCreateDTO.getName(), null);
         Schedule schedule = dtoMapper.toSchedule(scheduleCreateDTO);
         schedule = scheduleRepository.save(schedule);
         return dtoMapper.toScheduleDTO(schedule);
@@ -55,6 +58,9 @@ public class ScheduleService {
         Optional<Schedule> existing = scheduleRepository.findByIdAndDeletedAtIsNull(id);
         if (existing.isEmpty()) return Optional.empty();
         Schedule schedule = existing.get();
+        if (scheduleUpdateDTO.getName() != null) {
+            ensureScheduleNameAvailable(scheduleUpdateDTO.getName(), id);
+        }
         dtoMapper.updateScheduleFromDTO(scheduleUpdateDTO, schedule);
         schedule = scheduleRepository.save(schedule);
         return Optional.of(dtoMapper.toScheduleDTO(schedule));
@@ -64,6 +70,9 @@ public class ScheduleService {
     public boolean delete(Integer id) {
         Optional<Schedule> existing = scheduleRepository.findByIdAndDeletedAtIsNull(id);
         if (existing.isEmpty()) return false;
+        if (profileRepository.countBySchedules_IdAndDeletedAtIsNull(id) > 0) {
+            throw new IllegalArgumentException("Cannot delete a schedule that is still assigned to profiles");
+        }
         Schedule s = existing.get();
         s.setDeletedAt(java.time.Instant.now());
         scheduleRepository.save(s);
@@ -173,6 +182,20 @@ public class ScheduleService {
     private void validateTimeSlotRange(LocalTime startTime, LocalTime endTime) {
         if (!endTime.isAfter(startTime)) {
             throw new IllegalArgumentException("Time slot end time must be after start time; overnight slots are not supported");
+        }
+    }
+
+    private void ensureScheduleNameAvailable(String name, Integer currentScheduleId) {
+        if (name == null || name.isBlank()) {
+            return;
+        }
+
+        boolean exists = currentScheduleId == null
+            ? scheduleRepository.existsByNameIgnoreCaseAndDeletedAtIsNull(name.trim())
+            : scheduleRepository.existsByNameIgnoreCaseAndDeletedAtIsNullAndIdNot(name.trim(), currentScheduleId);
+
+        if (exists) {
+            throw new IllegalArgumentException("Schedule name already exists");
         }
     }
 

@@ -91,7 +91,7 @@ public class RoleService {
     }
 
     private void ensureRoleNameAvailable(String normalizedName, Integer currentRoleId) {
-        roleRepository.findByNameIgnoreCase(normalizedName).ifPresent(existingRole -> {
+        roleRepository.findByNameIgnoreCaseAndDeletedAtIsNull(normalizedName).ifPresent(existingRole -> {
             boolean isSameRole = currentRoleId != null && currentRoleId.equals(existingRole.getId());
             if (!isSameRole) {
                 throw new IllegalArgumentException("Role name already exists: " + normalizedName);

@@ -43,7 +43,7 @@ class RoleServiceTest {
             .createdAt(Instant.now())
             .build();
 
-        when(roleRepository.findByNameIgnoreCase("AUDITOR")).thenReturn(Optional.empty());
+        when(roleRepository.findByNameIgnoreCaseAndDeletedAtIsNull("AUDITOR")).thenReturn(Optional.empty());
         when(roleRepository.save(any(Role.class))).thenReturn(savedRole);
 
         RoleDTO created = roleService.create(new RoleCreateDTO("auditor", "Audit access"));

@@ -20,10 +20,16 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     @EntityGraph(attributePaths = {"roles"})
     Optional<User> findByEmailAndDeletedAtIsNull(String email);
 
+    boolean existsByEmailIgnoreCaseAndDeletedAtIsNull(String email);
+
+    boolean existsByEmailIgnoreCaseAndDeletedAtIsNullAndIdNot(String email, Integer id);
+
     /** Users responsible for this zone (zone_responsibility join) */
     java.util.List<User> findByResponsibleZones_IdAndDeletedAtIsNull(Integer zoneId);
 
     long countByRoles_IdAndDeletedAtIsNull(Integer roleId);
+
+    long countByProfiles_IdAndDeletedAtIsNull(Integer profileId);
 
     @EntityGraph(attributePaths = {
         "accessCard",

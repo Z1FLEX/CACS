@@ -2,6 +2,7 @@ package com.hsware.cacs.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,8 +19,8 @@ public class ProfileCreateDTO {
     private String name;
 
     @NotEmpty(message = "At least one schedule must be assigned")
-    private Set<Integer> scheduleIds;
+    private Set<@Positive(message = "Schedule IDs must be positive") Integer> scheduleIds;
 
     @NotEmpty(message = "At least one zone must be assigned")
-    private Set<Integer> zoneIds;
+    private Set<@Positive(message = "Zone IDs must be positive") Integer> zoneIds;
 }

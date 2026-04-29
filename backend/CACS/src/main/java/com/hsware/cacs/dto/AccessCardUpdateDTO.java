@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AccessCardUpdateDTO {
-    @Size(max = 100, message = "UID must not exceed 100 characters")
+    @Size(min = 1, max = 100, message = "UID must be between 1 and 100 characters")
     private String uid;
 
     @Pattern(regexp = "^(ACTIVE|INACTIVE|REVOKED)$", message = "Status must be ACTIVE, INACTIVE, or REVOKED")

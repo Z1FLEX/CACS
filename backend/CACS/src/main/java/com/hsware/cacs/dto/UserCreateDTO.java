@@ -3,6 +3,7 @@ package com.hsware.cacs.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -28,14 +29,15 @@ public class UserCreateDTO {
     
     private String name;
     
-    private Set<String> roles = Set.of("USER");
+    private Set<@NotBlank(message = "Role names must not be blank") @Size(max = 50, message = "Role names must not exceed 50 characters") String> roles = Set.of("USER");
     
     @Pattern(regexp = "^(ACTIVE|INACTIVE)$", message = "Status must be ACTIVE or INACTIVE")
     private String status = "ACTIVE";
     
     @Size(max = 255, message = "Address must not exceed 255 characters")
     private String address;
-    
+
+    @Positive(message = "Card ID must be positive")
     private Integer cardId;
-    private Set<Integer> profileIds;
+    private Set<@Positive(message = "Profile IDs must be positive") Integer> profileIds;
 }

@@ -1,6 +1,7 @@
 package com.hsware.cacs.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -19,8 +20,10 @@ public class ZoneCreateDTO {
     private String location;
 
     @NotNull(message = "Zone type is required")
+    @Positive(message = "Zone type ID must be positive")
     private Integer zoneTypeId;
 
     /** Set sole zone manager; omit to leave unassigned on create */
+    @Positive(message = "Responsible user ID must be positive")
     private Integer responsibleUserId;
 }
